@@ -133,11 +133,16 @@
 
   .empty-hint{
     position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:10px;color:var(--muted);text-align:center;pointer-events:none;padding:24px;
+    gap:10px;color:var(--muted);text-align:center;pointer-events:auto;cursor:pointer;padding:24px;
   }
+  .empty-hint::after{content:"";position:absolute;inset:14px;border:2px dashed var(--line-2);border-radius:14px;pointer-events:none;transition:border-color .15s ease}
+  .empty-hint:hover{color:var(--ink-2)}
+  .empty-hint:hover::after,.empty-hint.drag::after{border-color:var(--accent)}
+  .empty-hint.drag{background:var(--accent-soft)}
   .empty-hint svg{width:42px;height:42px;opacity:.5}
   .empty-hint b{font-weight:600;color:var(--ink-2);font-size:14px}
-  .empty-hint span{font-size:12.5px;max-width:240px}
+  .empty-hint span{font-size:12.5px;max-width:260px;line-height:1.45}
+  .empty-hint span b{font-size:inherit}
 
   /* ---------- Inspector fields ---------- */
   .field{display:flex;flex-direction:column;gap:5px}
@@ -207,6 +212,7 @@
     .topbar{gap:8px;padding:0 10px}
     .topbar .tb-actions .lbl{display:none}
     .topbar .name-input{display:none}
+    .brand h1{display:none}
     .btn{padding:0 10px}
   }
 
@@ -348,8 +354,9 @@
         <canvas id="c" class="canvas-shadow"></canvas>
         <div class="empty-hint" id="emptyHint">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m3 16 4-4a2 2 0 0 1 3 0l5 5M14 14l1-1a2 2 0 0 1 3 0l3 3"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
-          <b>Start with a box template</b>
-          <span>Upload a flat dieline or box layout, then drop your logo, images and text on top.</span>
+          <b>Tap here to upload your box template</b>
+          <span>Pick a flat dieline or box photo. Then use <b>Add</b> (top-left) for your logo, images and text.</span>
+          <button class="btn accent" id="emptyUpload" style="margin-top:4px">Upload box template</button>
         </div>
       </div>
     </div>
@@ -934,6 +941,23 @@ $('#fileLogo').addEventListener('change', e=>readImage(e.target, url=>addImageFr
 $('#fileImg').addEventListener('change', e=>readImage(e.target, url=>addImageFromURL(url,'image','Product image')));
 $('#fileJson').addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return;
   const r=new FileReader(); r.onload=()=>loadProject(r.result); r.readAsText(f); });
+
+/* empty-state artboard acts as an upload button */
+$('#emptyHint').addEventListener('click', ()=>pickFile('fileBg'));
+
+/* drag & drop an image onto the stage (desktop) */
+(function(){
+  const stageEl = $('#stage'), hint = $('#emptyHint');
+  ['dragenter','dragover'].forEach(ev=>stageEl.addEventListener(ev, e=>{ e.preventDefault(); if(!bgObject()) hint.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev=>stageEl.addEventListener(ev, e=>{ e.preventDefault(); hint.classList.remove('drag'); }));
+  stageEl.addEventListener('drop', e=>{
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if(!f || !f.type.startsWith('image/')) return;
+    const r = new FileReader();
+    r.onload = ()=>{ if(bgObject()) addImageFromURL(r.result,'image','Product image'); else loadBackground(r.result); };
+    r.readAsDataURL(f);
+  });
+})();
 
 $$('[data-text]').forEach(b=>b.addEventListener('click', ()=>addText(b.dataset.text)));
 
