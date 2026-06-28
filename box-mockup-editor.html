@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Box Design Mockup Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#1b1f24; --ink-2:#262b32; --ink-3:#323841;
+    --panel:#f5f6f8; --surface:#ffffff; --stage:#e6e9ef;
+    --line:#e2e5ea; --line-2:#d3d8df;
+    --text:#1b1f24; --muted:#727a85; --muted-2:#9aa2ad;
+    --accent:#f3a01c; --accent-press:#d98707; --accent-soft:#fdf0d8;
+    --danger:#e0533d;
+    --font-ui:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --r:9px; --r-sm:6px;
+    --shadow:0 1px 2px rgba(20,24,30,.06),0 8px 24px rgba(20,24,30,.08);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:var(--font-ui);color:var(--text);background:var(--panel);
+    overflow:hidden;display:flex;flex-direction:column;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  input,select{font-family:inherit}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    height:54px;flex:0 0 auto;background:var(--ink);color:#fff;
+    display:flex;align-items:center;gap:14px;padding:0 14px;z-index:40;
+  }
+  .brand{display:flex;align-items:center;gap:9px;min-width:0}
+  .brand .mark{
+    width:26px;height:26px;border-radius:7px;flex:0 0 auto;position:relative;
+    background:linear-gradient(135deg,var(--accent),#ef7d2e);
+  }
+  .brand .mark::before,.brand .mark::after{
+    content:"";position:absolute;background:rgba(0,0,0,.55)
+  }
+  .brand .mark::before{left:50%;top:5px;bottom:5px;width:1.5px;transform:translateX(-50%)}
+  .brand .mark::after{top:50%;left:5px;right:5px;height:1.5px;transform:translateY(-50%)}
+  .brand h1{font-size:14.5px;font-weight:650;margin:0;letter-spacing:-.01em;white-space:nowrap}
+  .brand .sub{font-size:10.5px;color:var(--muted-2);font-family:var(--font-mono);margin-top:1px}
+  .topbar .name-input{
+    background:var(--ink-2);border:1px solid var(--ink-3);color:#fff;
+    border-radius:var(--r-sm);padding:7px 10px;font-size:12.5px;width:170px;
+  }
+  .topbar .name-input:focus{outline:none;border-color:var(--accent)}
+  .spacer{flex:1 1 auto}
+  .tb-actions{display:flex;align-items:center;gap:7px}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    height:36px;padding:0 13px;border-radius:var(--r-sm);font-size:12.5px;font-weight:550;
+    background:var(--surface);color:var(--text);border:1px solid var(--line-2);
+    transition:transform .04s ease, background .12s ease, border-color .12s ease;
+    white-space:nowrap;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:var(--ink-2);color:#eef0f3;border-color:var(--ink-3)}
+  .btn.ghost:hover{background:var(--ink-3)}
+  .btn.accent{background:var(--accent);color:#241701;border-color:transparent;font-weight:650}
+  .btn.accent:hover{background:var(--accent-press)}
+  .btn.block{width:100%}
+  .btn svg{width:15px;height:15px}
+  .btn.icon{padding:0;width:36px;height:36px}
+  .btn.sm{height:30px;padding:0 9px;font-size:11.5px}
+  .btn.sm.icon{width:30px}
+  .btn[disabled]{opacity:.4;pointer-events:none}
+
+  /* ---------- Body ---------- */
+  .body{flex:1 1 auto;display:flex;min-height:0;position:relative}
+
+  .panel{
+    width:248px;flex:0 0 248px;background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;overflow-y:auto;z-index:30;
+  }
+  .panel.right{border-right:none;border-left:1px solid var(--line);width:268px;flex-basis:268px}
+  .panel::-webkit-scrollbar{width:9px}
+  .panel::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:9px;border:2px solid var(--panel)}
+
+  .sec{padding:14px;border-bottom:1px solid var(--line)}
+  .sec-title{
+    font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 10px;font-family:var(--font-mono);
+    display:flex;align-items:center;gap:7px;
+  }
+  .sec-title .dot{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+  .stack{display:flex;flex-direction:column;gap:7px}
+  .row{display:flex;gap:7px}
+  .row>*{flex:1}
+
+  /* ---------- Stage ---------- */
+  .stage-wrap{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;background:var(--stage)}
+  .stage-bar{
+    height:42px;flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:0 12px;
+    background:var(--surface);border-bottom:1px solid var(--line);overflow-x:auto;
+  }
+  .stage-bar .grp{display:flex;gap:4px;align-items:center}
+  .stage-bar .div{width:1px;height:22px;background:var(--line);margin:0 4px;flex:0 0 auto}
+  .stage-bar .zoom{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);min-width:46px;text-align:center}
+  .iconbtn{
+    width:32px;height:32px;border-radius:var(--r-sm);display:inline-flex;align-items:center;justify-content:center;
+    color:var(--ink-2);background:transparent;border:1px solid transparent;flex:0 0 auto;
+  }
+  .iconbtn:hover{background:var(--panel);border-color:var(--line)}
+  .iconbtn:active{transform:translateY(1px)}
+  .iconbtn[disabled]{opacity:.32;pointer-events:none}
+  .iconbtn svg{width:16px;height:16px}
+
+  .stage{
+    flex:1 1 auto;position:relative;overflow:auto;display:flex;align-items:center;justify-content:center;
+    padding:26px;
+  }
+  .artboard-frame{position:relative}
+  /* registration marks */
+  .artboard-frame::before,.artboard-frame::after{
+    content:"";position:absolute;pointer-events:none;
+  }
+  .reg{position:absolute;width:14px;height:14px;pointer-events:none;opacity:.55}
+  .reg::before,.reg::after{content:"";position:absolute;background:var(--muted-2)}
+  .reg::before{width:14px;height:1px;top:6px}
+  .reg::after{height:14px;width:1px;left:6px}
+  .reg.tl{top:-20px;left:-20px}.reg.tr{top:-20px;right:-20px}
+  .reg.bl{bottom:-20px;left:-20px}.reg.br{bottom:-20px;right:-20px}
+  canvas{display:block}
+  .canvas-shadow{box-shadow:0 6px 30px rgba(20,24,30,.16);background:#fff}
+
+  .empty-hint{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;color:var(--muted);text-align:center;pointer-events:none;padding:24px;
+  }
+  .empty-hint svg{width:42px;height:42px;opacity:.5}
+  .empty-hint b{font-weight:600;color:var(--ink-2);font-size:14px}
+  .empty-hint span{font-size:12.5px;max-width:240px}
+
+  /* ---------- Inspector fields ---------- */
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:10.5px;color:var(--muted);font-weight:550;font-family:var(--font-mono);letter-spacing:.02em}
+  .ctrl{
+    height:34px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:var(--surface);
+    padding:0 9px;font-size:12.5px;color:var(--text);width:100%;
+  }
+  .ctrl:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  input.ctrl[type=number]{font-family:var(--font-mono)}
+  select.ctrl{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23727a85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:26px}
+  textarea.ctrl{height:auto;min-height:64px;padding:8px 9px;resize:vertical;line-height:1.4;font-family:inherit}
+  .color-ctrl{display:flex;align-items:center;gap:8px}
+  .color-ctrl input[type=color]{width:34px;height:34px;border:1px solid var(--line-2);border-radius:var(--r-sm);background:none;padding:2px;flex:0 0 auto;cursor:pointer}
+  .seg{display:flex;border:1px solid var(--line-2);border-radius:var(--r-sm);overflow:hidden}
+  .seg button{flex:1;height:32px;background:var(--surface);font-size:13px;color:var(--muted);border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:none}
+  .seg button.on{background:var(--ink);color:#fff}
+  .slider-row{display:flex;align-items:center;gap:9px}
+  .slider-row input[type=range]{flex:1;accent-color:var(--accent)}
+  .slider-row .val{font-family:var(--font-mono);font-size:11px;color:var(--muted);min-width:34px;text-align:right}
+
+  .inspector-empty{padding:30px 18px;text-align:center;color:var(--muted);font-size:12.5px}
+  .inspector-empty svg{width:32px;height:32px;opacity:.4;margin-bottom:8px}
+
+  .obj-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+  .obj-actions .iconbtn{width:100%;height:34px;background:var(--surface);border:1px solid var(--line-2)}
+  .obj-actions .iconbtn:hover{background:var(--panel)}
+  .obj-actions .iconbtn.del:hover{color:var(--danger);border-color:var(--danger)}
+
+  /* ---------- Layers ---------- */
+  .layers{display:flex;flex-direction:column;gap:4px}
+  .layer{
+    display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--r-sm);
+    background:var(--surface);border:1px solid var(--line);cursor:pointer;
+  }
+  .layer.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+  .layer .thumb{
+    width:30px;height:30px;border-radius:5px;flex:0 0 auto;background:var(--panel);
+    display:flex;align-items:center;justify-content:center;color:var(--muted);overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .layer .thumb img{width:100%;height:100%;object-fit:cover}
+  .layer .thumb svg{width:15px;height:15px}
+  .layer .meta{flex:1;min-width:0}
+  .layer .meta .nm{font-size:12px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .layer .meta .ty{font-size:9.5px;color:var(--muted-2);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.04em}
+  .layer .lyr-btns{display:flex;gap:1px;flex:0 0 auto}
+  .layer .lyr-btns .iconbtn{width:25px;height:25px}
+  .layer .lyr-btns .iconbtn svg{width:13px;height:13px}
+  .layer.hidden-obj{opacity:.5}
+
+  /* ---------- Mobile drawers ---------- */
+  .drawer-toggles{display:none;gap:7px}
+  .scrim{display:none;position:absolute;inset:0;background:rgba(20,24,30,.35);z-index:25}
+  @media (max-width:960px){
+    .panel{position:absolute;top:0;bottom:0;box-shadow:var(--shadow);transition:transform .22s ease}
+    .panel.left{left:0;transform:translateX(-100%)}
+    .panel.right{right:0;transform:translateX(100%)}
+    .panel.open{transform:translateX(0)}
+    .scrim.show{display:block}
+    .drawer-toggles{display:flex}
+    .topbar .name-input{width:120px}
+    .brand .sub{display:none}
+  }
+  @media (max-width:560px){
+    .topbar{gap:8px;padding:0 10px}
+    .topbar .tb-actions .lbl{display:none}
+    .topbar .name-input{display:none}
+    .btn{padding:0 10px}
+  }
+
+  /* ---------- Modal (3D preview) ---------- */
+  .modal-scrim{
+    display:none;position:fixed;inset:0;background:rgba(15,18,22,.62);z-index:80;
+    align-items:center;justify-content:center;padding:20px;
+  }
+  .modal-scrim.show{display:flex}
+  .modal{
+    background:var(--surface);border-radius:14px;width:min(560px,100%);max-height:92vh;overflow:hidden;
+    box-shadow:0 24px 60px rgba(0,0,0,.4);display:flex;flex-direction:column;
+  }
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .modal-head h3{margin:0;font-size:14px;font-weight:650}
+  .modal-body{padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px;overflow:auto}
+  .scene{width:260px;height:300px;perspective:1100px;display:flex;align-items:center;justify-content:center}
+  .box3d{position:relative;width:170px;height:240px;transform-style:preserve-3d;transition:transform .05s linear;will-change:transform}
+  .face{position:absolute;background-size:cover;background-position:center;border:1px solid rgba(0,0,0,.12);
+        background-color:#fff;box-shadow:inset 0 0 60px rgba(0,0,0,.08)}
+  .face.front,.face.back{width:170px;height:240px}
+  .face.left,.face.right{width:70px;height:240px}
+  .face.top,.face.bottom{width:170px;height:70px}
+  .face.front{transform:translateZ(35px)}
+  .face.back{transform:rotateY(180deg) translateZ(35px)}
+  .face.right{left:170px;transform:rotateY(90deg) translateZ(0);transform-origin:left center;filter:brightness(.82)}
+  .face.left{transform:rotateY(-90deg) translateZ(35px);transform-origin:left center;filter:brightness(.78)}
+  .face.top{top:0;transform:rotateX(90deg) translateZ(35px);transform-origin:center top;filter:brightness(.9)}
+  .face.bottom{top:240px;transform:rotateX(-90deg) translateZ(35px);transform-origin:center top;filter:brightness(.7)}
+  .modal-foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;align-items:center;gap:12px;justify-content:space-between}
+  .modal-foot .hint{font-size:11.5px;color:var(--muted)}
+
+  .hidden{display:none!important}
+
+  /* toast */
+  .toast{
+    position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:12.5px;
+    box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:all .25s ease;z-index:100;
+    display:flex;align-items:center;gap:8px;max-width:90vw;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="mark"></div>
+    <div>
+      <h1>Box Design Mockup Editor</h1>
+      <div class="sub">flat dieline · v1</div>
+    </div>
+  </div>
+
+  <input id="projName" class="name-input" type="text" value="box-design" aria-label="Project name" />
+
+  <div class="drawer-toggles">
+    <button class="btn ghost sm" id="toggleLeft">Add</button>
+    <button class="btn ghost sm" id="toggleRight">Edit</button>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="tb-actions">
+    <button class="btn ghost" id="btnLoad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl">Load</span></button>
+    <button class="btn ghost" id="btnSave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg><span class="lbl">Save</span></button>
+    <button class="btn ghost icon" id="btn3d" title="3D preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></svg></button>
+    <button class="btn accent" id="btnExport"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg><span class="lbl">Export</span></button>
+  </div>
+</header>
+
+<div class="body">
+  <div class="scrim" id="scrim"></div>
+
+  <!-- ============ LEFT PANEL ============ -->
+  <aside class="panel left" id="leftPanel">
+    <div class="sec">
+      <h2 class="sec-title"><span class="dot"></span>Background / dieline</h2>
+      <div class="stack">
+        <button class="btn block" id="upBg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 16V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 16l4-4a2 2 0 0 1 3 0l5 5M14 14l1-1a2 2 0 0 1 3 0l3 3"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>Upload box template</button>
+        <button class="btn block" id="lockBg" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span id="lockBgLbl">Lock background</span></button>
+        <div class="field">
+          <label>Artboard colour</label>
+          <div class="color-ctrl">
+            <input type="color" id="bgColor" value="#ffffff" />
+            <input class="ctrl" type="text" id="bgColorHex" value="#ffffff" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2 class="sec-title"><span class="dot"></span>Graphics</h2>
+      <div class="stack">
+        <button class="btn block" id="upLogo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/><path d="M12 22V12M3.5 7 12 12l8.5-5"/></svg>Add logo</button>
+        <button class="btn block" id="upImg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Add product image</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2 class="sec-title"><span class="dot"></span>Text</h2>
+      <div class="stack">
+        <button class="btn block" data-text="product-name">+ Product name</button>
+        <div class="row">
+          <button class="btn sm" data-text="weight">Weight</button>
+          <button class="btn sm" data-text="best-before">Best before</button>
+        </div>
+        <button class="btn block" data-text="ingredients">+ Ingredients</button>
+        <button class="btn block" data-text="storage">+ Storage instructions</button>
+        <button class="btn block" data-text="custom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2M9 20h6M12 4v16"/></svg>Add custom text</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ STAGE ============ -->
+  <main class="stage-wrap">
+    <div class="stage-bar">
+      <div class="grp">
+        <button class="iconbtn" id="zoomOut" title="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8 11h6"/></svg></button>
+        <span class="zoom" id="zoomLbl">100%</span>
+        <button class="iconbtn" id="zoomIn" title="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8v6M8 11h6"/></svg></button>
+        <button class="iconbtn" id="zoomFit" title="Fit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg></button>
+      </div>
+      <div class="div"></div>
+      <div class="grp" id="quickActions">
+        <button class="iconbtn" data-act="forward" disabled title="Bring forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="3" width="13" height="13" rx="2"/><path d="M3 8v11a2 2 0 0 0 2 2h11"/></svg></button>
+        <button class="iconbtn" data-act="backward" disabled title="Send backward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="8" width="13" height="13" rx="2"/><path d="M8 3h11a2 2 0 0 1 2 2v11"/></svg></button>
+        <button class="iconbtn" data-act="duplicate" disabled title="Duplicate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        <button class="iconbtn del" data-act="delete" disabled title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+      </div>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="artboard-frame" id="artFrame">
+        <span class="reg tl"></span><span class="reg tr"></span><span class="reg bl"></span><span class="reg br"></span>
+        <canvas id="c" class="canvas-shadow"></canvas>
+        <div class="empty-hint" id="emptyHint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m3 16 4-4a2 2 0 0 1 3 0l5 5M14 14l1-1a2 2 0 0 1 3 0l3 3"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+          <b>Start with a box template</b>
+          <span>Upload a flat dieline or box layout, then drop your logo, images and text on top.</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============ RIGHT PANEL ============ -->
+  <aside class="panel right" id="rightPanel">
+    <div class="sec" id="inspector">
+      <h2 class="sec-title"><span class="dot"></span>Selection</h2>
+      <div id="inspBody">
+        <div class="inspector-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+          <div>Select an element on the canvas to edit it.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2 class="sec-title"><span class="dot"></span>Layers</h2>
+      <div class="layers" id="layers"></div>
+    </div>
+  </aside>
+</div>
+
+<!-- ============ 3D PREVIEW MODAL ============ -->
+<div class="modal-scrim" id="modal3d">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>3D box preview</h3>
+      <button class="iconbtn" id="close3d"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="scene" id="scene">
+        <div class="box3d" id="box3d">
+          <div class="face front"></div><div class="face back"></div>
+          <div class="face right"></div><div class="face left"></div>
+          <div class="face top"></div><div class="face bottom"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <span class="hint">Drag to rotate · wraps your flat design onto a box. Full per-panel mapping can come next.</span>
+      <button class="btn sm" id="spin3d">Auto-spin</button>
+    </div>
+  </div>
+</div>
+
+<!-- hidden file inputs -->
+<input type="file" id="fileBg" accept="image/*" class="hidden" />
+<input type="file" id="fileLogo" accept="image/*" class="hidden" />
+<input type="file" id="fileImg" accept="image/*" class="hidden" />
+<input type="file" id="fileJson" accept="application/json,.json" class="hidden" />
+
+<div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+
+<script>
+"use strict";
+
+/* ===================== State ===================== */
+const EXTRA_PROPS = ['id','etype','lname','selectable','evented',
+  'lockMovementX','lockMovementY','lockScalingX','lockScalingY','lockRotation','hasControls'];
+
+const TEXT_PRESETS = {
+  'product-name': {text:'PRODUCT NAME', fontSize:46, fontWeight:'700', fill:'#1b1f24', fontFamily:'Arial', width:380, name:'Product name'},
+  'weight':       {text:'500g', fontSize:30, fontWeight:'700', fill:'#1b1f24', fontFamily:'Arial', width:160, name:'Weight'},
+  'best-before':  {text:'Best before:\n01/11/26', fontSize:20, fontWeight:'400', fill:'#1b1f24', fontFamily:'Arial', width:200, name:'Best before'},
+  'ingredients':  {text:'Ingredients:\nList your ingredients here, separated by commas.', fontSize:18, fontWeight:'400', fill:'#1b1f24', fontFamily:'Arial', width:300, name:'Ingredients'},
+  'storage':      {text:'After opening, store in refrigerator at 4°C.', fontSize:18, fontWeight:'400', fill:'#ffffff', fontFamily:'Arial', width:260, name:'Storage'},
+  'custom':       {text:'Double-tap to edit', fontSize:24, fontWeight:'400', fill:'#1b1f24', fontFamily:'Arial', width:240, name:'Text'}
+};
+
+let designW = 900, designH = 620;          // logical artboard size
+let zoom = 1;                                // display zoom
+let uid = 1;
+let suppressInspector = false;               // guard against field<->object loops
+
+/* ===================== Canvas ===================== */
+const canvas = new fabric.Canvas('c', {
+  backgroundColor:'#ffffff',
+  preserveObjectStacking:true,
+  uniformScaling:true,        // images scale proportionally from corners
+  allowTouchScrolling:false,
+  selection:true
+});
+fabric.Object.prototype.set({
+  cornerStyle:'circle', cornerColor:'#fff', cornerStrokeColor:'#f3a01c',
+  cornerSize:13, touchCornerSize:24, transparentCorners:false,
+  borderColor:'#f3a01c', borderScaleFactor:1.4, padding:2
+});
+
+/* ===================== Helpers ===================== */
+const $ = (s)=>document.querySelector(s);
+const $$ = (s)=>document.querySelectorAll(s);
+let toastTimer;
+function toast(msg){
+  $('#toastMsg').textContent = msg;
+  $('#toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>$('#toast').classList.remove('show'), 2200);
+}
+function nextId(){ return 'el_'+(uid++)+'_'+Date.now().toString(36); }
+function bgObject(){ return canvas.getObjects().find(o=>o.etype==='background') || null; }
+
+/* ===================== Responsive zoom ===================== */
+function fitCanvas(){
+  const stage = $('#stage');
+  const availW = stage.clientWidth - 60;     // padding allowance
+  const availH = stage.clientHeight - 60;
+  let s = Math.min(availW/designW, availH/designH);
+  if(!isFinite(s) || s<=0) s = 1;
+  s = Math.min(s, 1.6);                       // don't blow up tiny artboards
+  applyZoom(s);
+}
+function applyZoom(s){
+  zoom = s;
+  canvas.setZoom(s);
+  canvas.setDimensions({ width:Math.round(designW*s), height:Math.round(designH*s) });
+  $('#zoomLbl').textContent = Math.round(s*100)+'%';
+  positionRegMarks();
+  canvas.requestRenderAll();
+}
+function positionRegMarks(){
+  // frame auto-sizes to canvas; marks are positioned via CSS corners. nothing needed.
+}
+function setDesignSize(w,h){
+  designW = Math.max(50, Math.round(w));
+  designH = Math.max(50, Math.round(h));
+  fitCanvas();
+}
+
+/* ===================== Empty hint ===================== */
+function refreshEmptyHint(){
+  const hasAny = canvas.getObjects().length>0;
+  $('#emptyHint').classList.toggle('hidden', hasAny);
+}
+
+/* ===================== Add elements ===================== */
+function styleImage(img){
+  img.set({ borderColor:'#f3a01c', cornerColor:'#fff', cornerStrokeColor:'#f3a01c' });
+  img.lockSkewingX = true; img.lockSkewingY = true;
+}
+
+function addImageFromURL(url, etype, displayName){
+  fabric.Image.fromURL(url, (img)=>{
+    if(!img){ toast('Could not load that image.'); return; }
+    const maxDim = (etype==='logo') ? designW*0.30 : designW*0.42;
+    const scale = Math.min(1, maxDim/Math.max(img.width, img.height));
+    img.set({
+      id:nextId(), etype:etype, lname:displayName,
+      left:designW/2, top:designH/2, originX:'center', originY:'center',
+      scaleX:scale, scaleY:scale
+    });
+    styleImage(img);
+    canvas.add(img);
+    canvas.setActiveObject(img);
+    enforceBgOrder();
+    canvas.requestRenderAll();
+    rebuildLayers(); refreshEmptyHint();
+  }, { crossOrigin:'anonymous' });
+}
+
+function loadBackground(url){
+  fabric.Image.fromURL(url, (img)=>{
+    if(!img){ toast('Could not load that image.'); return; }
+    // remove existing background
+    const old = bgObject();
+    if(old) canvas.remove(old);
+    // size the artboard to the dieline (cap longest side)
+    const cap = 1500;
+    const longest = Math.max(img.width, img.height);
+    const f = longest>cap ? cap/longest : 1;
+    setDesignSize(img.width*f, img.height*f);
+    img.set({
+      id:nextId(), etype:'background', lname:'Background',
+      left:0, top:0, originX:'left', originY:'top',
+      scaleX:f, scaleY:f
+    });
+    setLockState(img, true);          // locked by default
+    canvas.add(img);
+    enforceBgOrder();
+    canvas.requestRenderAll();
+    rebuildLayers(); refreshEmptyHint();
+    updateLockBgButton();
+    toast('Background added & locked.');
+  }, { crossOrigin:'anonymous' });
+}
+
+function addText(presetKey){
+  const p = TEXT_PRESETS[presetKey] || TEXT_PRESETS.custom;
+  const t = new fabric.Textbox(p.text, {
+    id:nextId(), etype:'text', lname:p.name,
+    left:designW/2, top:designH/2, originX:'center', originY:'center',
+    width:p.width, fontSize:p.fontSize, fontFamily:p.fontFamily,
+    fontWeight:p.fontWeight, fill:p.fill, textAlign:'left',
+    lineHeight:1.16, editable:true
+  });
+  canvas.add(t);
+  canvas.setActiveObject(t);
+  enforceBgOrder();
+  canvas.requestRenderAll();
+  rebuildLayers(); refreshEmptyHint();
+}
+
+function enforceBgOrder(){
+  const bg = bgObject();
+  if(bg) canvas.sendToBack(bg);
+}
+
+/* ===================== Lock helpers ===================== */
+function setLockState(obj, locked){
+  obj.lockMovementX = locked; obj.lockMovementY = locked;
+  obj.lockScalingX = locked; obj.lockScalingY = locked;
+  obj.lockRotation = locked;
+  obj.hasControls = !locked;
+  obj.selectable = !locked;
+  obj.evented = !locked;
+  obj._locked = locked;
+}
+function isLocked(obj){
+  return !!(obj && (obj._locked || obj.selectable===false));
+}
+
+/* ===================== Object actions ===================== */
+function doAction(act){
+  const o = canvas.getActiveObject();
+  if(!o) return;
+  if(act==='delete'){
+    if(Array.isArray(o._objects)){ o.forEachObject(x=>canvas.remove(x)); }
+    canvas.discardActiveObject(); canvas.remove(o);
+  } else if(act==='duplicate'){
+    o.clone((cl)=>{
+      cl.set({ id:nextId(), lname:(o.lname||'Layer')+' copy',
+        left:(o.left||0)+22, top:(o.top||0)+22 });
+      canvas.add(cl); canvas.setActiveObject(cl); enforceBgOrder();
+      canvas.requestRenderAll(); rebuildLayers();
+    }, EXTRA_PROPS);
+    return;
+  } else if(act==='forward'){ canvas.bringForward(o); enforceBgOrder(); }
+  else if(act==='backward'){ canvas.sendBackwards(o); enforceBgOrder(); }
+  else if(act==='front'){ canvas.bringToFront(o); }
+  else if(act==='back'){ canvas.sendToBack(o); enforceBgOrder(); }
+  else if(act==='flipH'){ o.set('flipX', !o.flipX); }
+  else if(act==='flipV'){ o.set('flipY', !o.flipY); }
+  canvas.requestRenderAll(); rebuildLayers();
+}
+
+/* ===================== Inspector ===================== */
+function fieldRow(html){ return html; }
+
+function buildInspector(o){
+  const body = $('#inspBody');
+  if(!o){
+    body.innerHTML = `<div class="inspector-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+      <div>Select an element on the canvas to edit it.</div></div>`;
+    return;
+  }
+  const isText = o.type==='textbox';
+  const w = Math.round(o.getScaledWidth());
+  const h = Math.round(o.getScaledHeight());
+  const op = Math.round((o.opacity ?? 1)*100);
+  const ang = Math.round(o.angle||0);
+
+  let html = `
+  <div class="obj-actions" style="margin-bottom:12px">
+    <button class="iconbtn" data-act="forward" title="Forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="8" y="3" width="13" height="13" rx="2"/><path d="M3 8v11a2 2 0 0 0 2 2h11"/></svg></button>
+    <button class="iconbtn" data-act="backward" title="Backward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="8" width="13" height="13" rx="2"/><path d="M8 3h11a2 2 0 0 1 2 2v11"/></svg></button>
+    <button class="iconbtn" data-act="duplicate" title="Duplicate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+    <button class="iconbtn del" data-act="delete" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+  </div>`;
+
+  if(isText){
+    html += `<div class="field" style="margin-bottom:10px">
+      <label>Text content</label>
+      <textarea class="ctrl" id="f_text">${escapeHtml(o.text)}</textarea>
+    </div>`;
+  }
+
+  html += `<div class="row" style="margin-bottom:8px">
+      <div class="field"><label>X</label><input class="ctrl" type="number" id="f_x" value="${Math.round(o.left)}"></div>
+      <div class="field"><label>Y</label><input class="ctrl" type="number" id="f_y" value="${Math.round(o.top)}"></div>
+    </div>
+    <div class="row" style="margin-bottom:8px">
+      <div class="field"><label>W</label><input class="ctrl" type="number" id="f_w" value="${w}"></div>
+      <div class="field"><label>H</label><input class="ctrl" type="number" id="f_h" value="${h}" ${isText?'disabled':''}></div>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <div class="field"><label>Rotation°</label><input class="ctrl" type="number" id="f_ang" value="${ang}"></div>
+      <div class="field"><label>Opacity</label>
+        <div class="slider-row"><input type="range" id="f_op" min="0" max="100" value="${op}"><span class="val" id="f_op_v">${op}%</span></div>
+      </div>
+    </div>`;
+
+  if(isText){
+    const fonts = ['Arial','Helvetica','Georgia','Times New Roman','Courier New','Verdana','Trebuchet MS','Impact','Comic Sans MS'];
+    html += `<div class="field" style="margin-bottom:8px">
+        <label>Font</label>
+        <select class="ctrl" id="f_font">${fonts.map(f=>`<option value="${f}" ${o.fontFamily===f?'selected':''}>${f}</option>`).join('')}</select>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <div class="field" style="flex:0 0 96px"><label>Size</label><input class="ctrl" type="number" id="f_fsize" value="${Math.round(o.fontSize)}"></div>
+        <div class="field"><label>Colour</label>
+          <div class="color-ctrl"><input type="color" id="f_fill" value="${toHex(o.fill)}"><input class="ctrl" type="text" id="f_fillhex" value="${toHex(o.fill)}"></div>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <div class="seg" style="flex:0 0 96px">
+          <button id="f_bold" class="${o.fontWeight==='700'||o.fontWeight==='bold'?'on':''}" style="font-weight:700">B</button>
+          <button id="f_italic" class="${o.fontStyle==='italic'?'on':''}" style="font-style:italic">I</button>
+          <button id="f_under" class="${o.underline?'on':''}" style="text-decoration:underline">U</button>
+        </div>
+        <div class="seg">
+          <button data-align="left" class="${o.textAlign==='left'?'on':''}">&#8676;</button>
+          <button data-align="center" class="${o.textAlign==='center'?'on':''}">&#8596;</button>
+          <button data-align="right" class="${o.textAlign==='right'?'on':''}">&#8677;</button>
+        </div>
+      </div>`;
+  }
+
+  // lock toggle for any element
+  const locked = isLocked(o);
+  html += `<button class="btn block sm" id="f_lock" style="margin-top:6px">
+      ${locked
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Unlock element'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0"/></svg>Lock element'}
+    </button>`;
+
+  body.innerHTML = html;
+  wireInspector(o, isText);
+}
+
+function wireInspector(o, isText){
+  const on = (id, ev, fn)=>{ const el=$('#'+id); if(el) el.addEventListener(ev, fn); };
+
+  $$('#inspBody [data-act]').forEach(b=>b.addEventListener('click',()=>doAction(b.dataset.act)));
+
+  if(isText){
+    on('f_text','input', e=>{ o.set('text', e.target.value); canvas.requestRenderAll(); syncLayerName(o); });
+  }
+  on('f_x','input', e=>{ o.set('left', num(e.target.value)); o.setCoords(); canvas.requestRenderAll(); });
+  on('f_y','input', e=>{ o.set('top', num(e.target.value)); o.setCoords(); canvas.requestRenderAll(); });
+  on('f_w','input', e=>{
+    const v = num(e.target.value); if(v<=0) return;
+    if(isText){ o.set('width', v); }
+    else { o.set('scaleX', v/o.width); o.set('scaleY', o.scaleX); }
+    o.setCoords(); canvas.requestRenderAll();
+  });
+  on('f_h','input', e=>{
+    const v = num(e.target.value); if(v<=0||isText) return;
+    o.set('scaleY', v/o.height); o.setCoords(); canvas.requestRenderAll();
+  });
+  on('f_ang','input', e=>{ o.rotate(num(e.target.value)); o.setCoords(); canvas.requestRenderAll(); });
+  on('f_op','input', e=>{ o.set('opacity', num(e.target.value)/100); $('#f_op_v').textContent=e.target.value+'%'; canvas.requestRenderAll(); });
+
+  if(isText){
+    on('f_font','change', e=>{ o.set('fontFamily', e.target.value); canvas.requestRenderAll(); });
+    on('f_fsize','input', e=>{ o.set('fontSize', num(e.target.value)||12); canvas.requestRenderAll(); });
+    const setFill=(v)=>{ o.set('fill', v); const a=$('#f_fill'),b=$('#f_fillhex'); if(a)a.value=toHex(v); if(b)b.value=v; canvas.requestRenderAll(); };
+    on('f_fill','input', e=>setFill(e.target.value));
+    on('f_fillhex','change', e=>setFill(e.target.value));
+    on('f_bold','click', ()=>{ const b=(o.fontWeight==='700'||o.fontWeight==='bold'); o.set('fontWeight', b?'400':'700'); refreshSelection(); canvas.requestRenderAll(); });
+    on('f_italic','click', ()=>{ o.set('fontStyle', o.fontStyle==='italic'?'normal':'italic'); refreshSelection(); canvas.requestRenderAll(); });
+    on('f_under','click', ()=>{ o.set('underline', !o.underline); refreshSelection(); canvas.requestRenderAll(); });
+    $$('#inspBody [data-align]').forEach(b=>b.addEventListener('click',()=>{ o.set('textAlign', b.dataset.align); refreshSelection(); canvas.requestRenderAll(); }));
+  }
+
+  on('f_lock','click', ()=>{
+    const newLocked = !isLocked(o);
+    setLockState(o, newLocked);
+    if(newLocked) canvas.discardActiveObject();
+    canvas.requestRenderAll(); rebuildLayers();
+    if(o.etype==='background') updateLockBgButton();
+    refreshSelection();
+  });
+}
+
+function refreshSelection(){
+  const o = canvas.getActiveObject();
+  buildInspector(o && !o._objects ? o : (o||null));
+}
+
+/* update inspector live while dragging on canvas */
+function liveUpdateFields(){
+  const o = canvas.getActiveObject(); if(!o) return;
+  const set=(id,v)=>{ const el=$('#'+id); if(el && document.activeElement!==el) el.value=v; };
+  set('f_x', Math.round(o.left)); set('f_y', Math.round(o.top));
+  if(o.type!=='textbox'){ set('f_h', Math.round(o.getScaledHeight())); }
+  set('f_w', o.type==='textbox'? Math.round(o.width) : Math.round(o.getScaledWidth()));
+  set('f_ang', Math.round(o.angle||0));
+}
+
+/* ===================== Layers panel ===================== */
+function typeIcon(etype){
+  if(etype==='background') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m3 16 4-4a2 2 0 0 1 3 0l5 5"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>';
+  if(etype==='logo') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/></svg>';
+  if(etype==='text') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg>';
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>';
+}
+function rebuildLayers(){
+  const list = $('#layers');
+  const objs = canvas.getObjects().slice().reverse(); // top first
+  const active = canvas.getActiveObject();
+  list.innerHTML = '';
+  objs.forEach((o)=>{
+    const row = document.createElement('div');
+    row.className = 'layer' + (o===active?' sel':'') + (o.visible===false?' hidden-obj':'');
+    let thumb = `<div class="thumb">${typeIcon(o.etype)}</div>`;
+    if((o.etype==='logo'||o.etype==='image'||o.etype==='background') && o._element){
+      try{
+        const src = o.getSrc ? o.getSrc() : (o._element.src||'');
+        if(src) thumb = `<div class="thumb"><img src="${src}" alt=""></div>`;
+      }catch(e){}
+    }
+    const label = o.lname || (o.type==='textbox' ? (o.text||'Text').slice(0,18) : 'Layer');
+    const locked = isLocked(o);
+    row.innerHTML = `${thumb}
+      <div class="meta"><div class="nm">${escapeHtml(label)}</div><div class="ty">${o.etype||o.type}</div></div>
+      <div class="lyr-btns">
+        <button class="iconbtn" data-l="vis" title="Show/Hide">${o.visible===false
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9.9 4.24A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.16 3.19M6.6 6.6A18 18 0 0 0 2 12s3 8 10 8a9 9 0 0 0 3.4-.66M1 1l22 22"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8z"/><circle cx="12" cy="12" r="3"/></svg>'}</button>
+        <button class="iconbtn" data-l="lock" title="Lock">${locked
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0"/></svg>'}</button>
+        <button class="iconbtn" data-l="up" title="Up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m18 15-6-6-6 6"/></svg></button>
+        <button class="iconbtn" data-l="down" title="Down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m6 9 6 6 6-6"/></svg></button>
+      </div>`;
+
+    row.addEventListener('click',(e)=>{
+      if(e.target.closest('[data-l]')) return;
+      if(isLocked(o)){ toast('Layer is locked.'); return; }
+      canvas.setActiveObject(o); canvas.requestRenderAll();
+    });
+    row.querySelector('[data-l="vis"]').addEventListener('click',(e)=>{ e.stopPropagation();
+      o.visible = !(o.visible!==false); if(o.visible===false && o===active) canvas.discardActiveObject();
+      canvas.requestRenderAll(); rebuildLayers(); });
+    row.querySelector('[data-l="lock"]').addEventListener('click',(e)=>{ e.stopPropagation();
+      const nl=!isLocked(o); setLockState(o,nl); if(nl&&o===active) canvas.discardActiveObject();
+      if(o.etype==='background') updateLockBgButton();
+      canvas.requestRenderAll(); rebuildLayers(); });
+    row.querySelector('[data-l="up"]').addEventListener('click',(e)=>{ e.stopPropagation();
+      canvas.bringForward(o); enforceBgOrder(); canvas.requestRenderAll(); rebuildLayers(); });
+    row.querySelector('[data-l="down"]').addEventListener('click',(e)=>{ e.stopPropagation();
+      canvas.sendBackwards(o); enforceBgOrder(); canvas.requestRenderAll(); rebuildLayers(); });
+
+    list.appendChild(row);
+  });
+  if(objs.length===0){
+    list.innerHTML = '<div style="font-size:12px;color:var(--muted-2);padding:6px 2px">No layers yet.</div>';
+  }
+}
+function syncLayerName(o){
+  if(o.type==='textbox' && (!o.lname || o.lname==='Text')){ /* keep preset name */ }
+  rebuildLayers();
+}
+
+/* ===================== Quick-action toolbar enable/disable ===================== */
+function updateQuickActions(){
+  const has = !!canvas.getActiveObject();
+  $$('#quickActions [data-act]').forEach(b=>b.disabled = !has);
+}
+
+/* ===================== Background lock button ===================== */
+function updateLockBgButton(){
+  const bg = bgObject();
+  const btn = $('#lockBg'); const lbl = $('#lockBgLbl');
+  btn.disabled = !bg;
+  if(!bg){ lbl.textContent='Lock background'; return; }
+  lbl.textContent = isLocked(bg) ? 'Unlock background' : 'Lock background';
+}
+
+/* ===================== Export ===================== */
+function withFullRes(fn){
+  const aObj = canvas.getActiveObject();
+  const prevZoom = zoom;
+  const prevW = canvas.getWidth(), prevH = canvas.getHeight();
+  canvas.discardActiveObject();
+  canvas.setZoom(1);
+  canvas.setDimensions({ width:designW, height:designH });
+  canvas.renderAll();
+  const result = fn();
+  // restore
+  canvas.setZoom(prevZoom);
+  canvas.setDimensions({ width:Math.round(designW*prevZoom), height:Math.round(designH*prevZoom) });
+  if(aObj){ canvas.setActiveObject(aObj); }
+  canvas.requestRenderAll();
+  return result;
+}
+function fileName(ext){
+  const base = ($('#projName').value || 'box-design').trim().replace(/[^\w\-]+/g,'_') || 'box-design';
+  return base + '.' + ext;
+}
+function download(url, name){
+  const a = document.createElement('a'); a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function exportRaster(type){
+  const mult = 2;
+  const opts = { format: type==='jpeg'?'jpeg':'png', multiplier:mult, quality:0.94 };
+  const url = withFullRes(()=>canvas.toDataURL(opts));
+  download(url, fileName(type==='jpeg'?'jpg':'png'));
+  toast('Exported '+(type==='jpeg'?'JPG':'PNG'));
+}
+function exportPDF(){
+  const url = withFullRes(()=>canvas.toDataURL({format:'png', multiplier:2}));
+  const { jsPDF } = window.jspdf;
+  const orient = designW>=designH ? 'landscape':'portrait';
+  const pdf = new jsPDF({ orientation:orient, unit:'px', format:[designW, designH] });
+  pdf.addImage(url, 'PNG', 0, 0, designW, designH);
+  pdf.save(fileName('pdf'));
+  toast('Exported PDF');
+}
+
+/* ===================== Save / Load JSON ===================== */
+function saveProject(){
+  const data = {
+    app:'box-mockup-editor', version:1,
+    name: $('#projName').value || 'box-design',
+    designW, designH,
+    bgColor: canvas.backgroundColor || '#ffffff',
+    uid,
+    canvas: canvas.toJSON(EXTRA_PROPS)
+  };
+  const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+  download(URL.createObjectURL(blob), fileName('json'));
+  toast('Project saved');
+}
+function loadProject(json){
+  let data;
+  try{ data = JSON.parse(json); }catch(e){ toast('That file is not a valid project.'); return; }
+  if(!data || !data.canvas){ toast('Unrecognised project file.'); return; }
+  if(data.name) $('#projName').value = data.name;
+  uid = data.uid || uid;
+  designW = data.designW || designW;
+  designH = data.designH || designH;
+  canvas.clear();
+  canvas.backgroundColor = data.bgColor || '#ffffff';
+  canvas.loadFromJSON(data.canvas, ()=>{
+    // re-apply lock flags that may not survive cleanly
+    canvas.getObjects().forEach(o=>{
+      if(o.selectable===false){ o._locked = true; }
+    });
+    enforceBgOrder();
+    fitCanvas();
+    canvas.renderAll();
+    rebuildLayers(); refreshEmptyHint(); updateLockBgButton();
+    $('#bgColor').value = toHex(canvas.backgroundColor);
+    $('#bgColorHex').value = canvas.backgroundColor;
+    toast('Project loaded');
+  });
+}
+
+/* ===================== Utils ===================== */
+function num(v){ const n=parseFloat(v); return isNaN(n)?0:n; }
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function toHex(c){
+  if(!c) return '#000000';
+  if(typeof c==='string' && c[0]==='#'){
+    if(c.length===4) return '#'+c[1]+c[1]+c[2]+c[2]+c[3]+c[3];
+    return c.slice(0,7);
+  }
+  const m = String(c).match(/rgba?\(([^)]+)\)/);
+  if(m){ const p=m[1].split(',').map(x=>parseFloat(x));
+    return '#'+p.slice(0,3).map(x=>('0'+Math.round(x).toString(16)).slice(-2)).join(''); }
+  return '#000000';
+}
+
+/* ===================== Wire UI ===================== */
+function pickFile(inputId){ $('#'+inputId).value=''; $('#'+inputId).click(); }
+function readImage(input, cb){
+  const f = input.files && input.files[0]; if(!f) return;
+  const r = new FileReader(); r.onload = ()=>cb(r.result); r.readAsDataURL(f);
+}
+
+$('#upBg').addEventListener('click', ()=>pickFile('fileBg'));
+$('#upLogo').addEventListener('click', ()=>pickFile('fileLogo'));
+$('#upImg').addEventListener('click', ()=>pickFile('fileImg'));
+$('#btnLoad').addEventListener('click', ()=>pickFile('fileJson'));
+
+$('#fileBg').addEventListener('change', e=>readImage(e.target, url=>loadBackground(url)));
+$('#fileLogo').addEventListener('change', e=>readImage(e.target, url=>addImageFromURL(url,'logo','Logo')));
+$('#fileImg').addEventListener('change', e=>readImage(e.target, url=>addImageFromURL(url,'image','Product image')));
+$('#fileJson').addEventListener('change', e=>{ const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=()=>loadProject(r.result); r.readAsText(f); });
+
+$$('[data-text]').forEach(b=>b.addEventListener('click', ()=>addText(b.dataset.text)));
+
+$('#lockBg').addEventListener('click', ()=>{
+  const bg = bgObject(); if(!bg) return;
+  const nl = !isLocked(bg); setLockState(bg, nl);
+  if(nl) canvas.discardActiveObject();
+  canvas.requestRenderAll(); rebuildLayers(); updateLockBgButton();
+});
+
+function applyBgColor(v){
+  canvas.backgroundColor = v; canvas.requestRenderAll();
+  $('#bgColor').value = toHex(v); $('#bgColorHex').value = v;
+}
+$('#bgColor').addEventListener('input', e=>applyBgColor(e.target.value));
+$('#bgColorHex').addEventListener('change', e=>applyBgColor(e.target.value));
+
+$('#zoomIn').addEventListener('click', ()=>applyZoom(Math.min(zoom*1.15, 3)));
+$('#zoomOut').addEventListener('click', ()=>applyZoom(Math.max(zoom/1.15, 0.1)));
+$('#zoomFit').addEventListener('click', fitCanvas);
+
+$$('#quickActions [data-act]').forEach(b=>b.addEventListener('click', ()=>doAction(b.dataset.act)));
+
+$('#btnSave').addEventListener('click', saveProject);
+
+// export menu (simple: cycle via prompt-free buttons)
+let exportMenuOpen=false;
+$('#btnExport').addEventListener('click', (e)=>{
+  showExportMenu(e.currentTarget);
+});
+function showExportMenu(anchor){
+  closeExportMenu();
+  const m = document.createElement('div');
+  m.id='exportMenu';
+  m.style.cssText='position:fixed;z-index:90;background:#fff;border:1px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);padding:6px;min-width:150px';
+  const r = anchor.getBoundingClientRect();
+  m.style.top=(r.bottom+6)+'px'; m.style.right=(window.innerWidth-r.right)+'px';
+  [['PNG image','png'],['JPG image','jpg'],['PDF document','pdf']].forEach(([lbl,k])=>{
+    const it=document.createElement('button');
+    it.className='btn block'; it.style.cssText='justify-content:flex-start;border:none;background:none;height:34px';
+    it.textContent=lbl;
+    it.onmouseenter=()=>it.style.background='var(--panel)';
+    it.onmouseleave=()=>it.style.background='none';
+    it.onclick=()=>{ closeExportMenu(); if(k==='png')exportRaster('png'); else if(k==='jpg')exportRaster('jpeg'); else exportPDF(); };
+    m.appendChild(it);
+  });
+  document.body.appendChild(m); exportMenuOpen=true;
+  setTimeout(()=>document.addEventListener('click', onDocClickExport),0);
+}
+function onDocClickExport(e){ if(!e.target.closest('#exportMenu')&&e.target.id!=='btnExport'){ closeExportMenu(); } }
+function closeExportMenu(){ const m=$('#exportMenu'); if(m)m.remove(); exportMenuOpen=false; document.removeEventListener('click', onDocClickExport); }
+
+/* ----- mobile drawers ----- */
+function openDrawer(side){
+  closeDrawers();
+  $(side==='left'?'#leftPanel':'#rightPanel').classList.add('open');
+  $('#scrim').classList.add('show');
+}
+function closeDrawers(){
+  $('#leftPanel').classList.remove('open'); $('#rightPanel').classList.remove('open');
+  $('#scrim').classList.remove('show');
+}
+$('#toggleLeft').addEventListener('click', ()=>openDrawer('left'));
+$('#toggleRight').addEventListener('click', ()=>openDrawer('right'));
+$('#scrim').addEventListener('click', closeDrawers);
+
+/* ----- 3D preview ----- */
+let spinReq=null, spinning=false, rotX=-14, rotY=24, dragging3d=false, lastX=0,lastY=0;
+function open3d(){
+  const url = withFullRes(()=>canvas.toDataURL({format:'png', multiplier:1}));
+  $$('#box3d .front, #box3d .back').forEach(f=>f.style.backgroundImage=`url(${url})`);
+  // side faces: subtle tinted version
+  $$('#box3d .left, #box3d .right, #box3d .top, #box3d .bottom').forEach(f=>{ f.style.backgroundImage=`url(${url})`; });
+  $('#modal3d').classList.add('show');
+  apply3d();
+}
+function apply3d(){ $('#box3d').style.transform=`rotateX(${rotX}deg) rotateY(${rotY}deg)`; }
+function spinLoop(){ if(!spinning) return; rotY+=0.5; apply3d(); spinReq=requestAnimationFrame(spinLoop); }
+$('#btn3d').addEventListener('click', ()=>{ if(canvas.getObjects().length===0){ toast('Add a design first.'); return; } open3d(); });
+$('#close3d').addEventListener('click', ()=>{ $('#modal3d').classList.remove('show'); spinning=false; if(spinReq)cancelAnimationFrame(spinReq); });
+$('#modal3d').addEventListener('click', e=>{ if(e.target.id==='modal3d'){ $('#modal3d').classList.remove('show'); spinning=false; if(spinReq)cancelAnimationFrame(spinReq);} });
+$('#spin3d').addEventListener('click', ()=>{ spinning=!spinning; $('#spin3d').textContent=spinning?'Stop':'Auto-spin'; if(spinning)spinLoop(); else if(spinReq)cancelAnimationFrame(spinReq); });
+const scene=$('#scene');
+function ptr(e){ return e.touches? e.touches[0] : e; }
+scene.addEventListener('pointerdown', e=>{ dragging3d=true; lastX=e.clientX; lastY=e.clientY; });
+window.addEventListener('pointermove', e=>{ if(!dragging3d)return; rotY+=(e.clientX-lastX)*0.4; rotX-=(e.clientY-lastY)*0.4; lastX=e.clientX; lastY=e.clientY; apply3d(); });
+window.addEventListener('pointerup', ()=>{ dragging3d=false; });
+
+/* ===================== Canvas events ===================== */
+canvas.on('selection:created', refreshSelection);
+canvas.on('selection:updated', refreshSelection);
+canvas.on('selection:cleared', ()=>{ buildInspector(null); updateQuickActions(); rebuildLayers(); });
+canvas.on('selection:created', updateQuickActions);
+canvas.on('selection:updated', updateQuickActions);
+canvas.on('object:added', ()=>{ updateLockBgButton(); });
+canvas.on('object:removed', ()=>{ rebuildLayers(); refreshEmptyHint(); updateQuickActions(); updateLockBgButton(); });
+canvas.on('object:modified', ()=>{ refreshSelection(); rebuildLayers(); });
+canvas.on('object:moving', liveUpdateFields);
+canvas.on('object:scaling', liveUpdateFields);
+canvas.on('object:rotating', liveUpdateFields);
+canvas.on('text:changed', ()=>{ refreshSelection(); });
+
+/* keyboard (desktop convenience) */
+document.addEventListener('keydown', e=>{
+  const o = canvas.getActiveObject();
+  const editing = o && o.isEditing;
+  const typing = ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName);
+  if(editing || typing) return;
+  if((e.key==='Delete'||e.key==='Backspace') && o){ e.preventDefault(); doAction('delete'); }
+  else if((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='d' && o){ e.preventDefault(); doAction('duplicate'); }
+  else if(e.key==='Escape'){ canvas.discardActiveObject(); canvas.requestRenderAll(); }
+});
+
+/* ===================== Init ===================== */
+window.addEventListener('resize', ()=>{ fitCanvas(); });
+new ResizeObserver(()=>fitCanvas()).observe($('#stage'));
+fitCanvas();
+rebuildLayers();
+refreshEmptyHint();
+buildInspector(null);
+</script>
+</body>
+</html>
