@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ChefLink Communications Dashboard</title>
+<style>
+:root {
+  --bg:#0e1117; --panel:#151a23; --panel2:#1d2430; --text:#f7f4ed; --muted:#a9b0bd;
+  --gold:#d1a45f; --line:rgba(255,255,255,.11); --green:#34d399; --red:#fb7185;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Arial,sans-serif;background:radial-gradient(circle at top left,#25202b 0,#0e1117 42%,#090b10 100%);color:var(--text)}
+a{color:inherit}
+.header{padding:34px 22px 18px;max-width:1300px;margin:auto;display:flex;gap:20px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+.logo{font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:800}
+h1{margin:8px 0 8px;font-size:clamp(30px,4vw,54px);line-height:1.02}
+.subtitle{color:var(--muted);max-width:800px;line-height:1.55;margin:0}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+button,.btn{border:1px solid var(--line);background:linear-gradient(180deg,#2b3341,#171d27);color:var(--text);padding:11px 14px;border-radius:12px;cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+button:hover,.btn:hover{border-color:var(--gold);transform:translateY(-1px)}
+.primary{background:linear-gradient(135deg,#d1a45f,#a7752d);color:#14100a;border:0}
+.grid{max-width:1300px;margin:0 auto;padding:18px 22px 40px;display:grid;grid-template-columns:320px 1fr;gap:18px}
+.card{background:rgba(21,26,35,.88);border:1px solid var(--line);border-radius:20px;box-shadow:0 20px 70px rgba(0,0,0,.25)}
+.sidebar{padding:18px;position:sticky;top:12px;height:max-content}
+.statGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:14px}
+.stat b{display:block;font-size:28px;color:var(--gold)}
+.stat span{font-size:12px;color:var(--muted)}
+label{display:block;margin:15px 0 6px;color:var(--muted);font-size:13px}
+input,select,textarea{width:100%;background:#0c1016;color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit}
+textarea{min-height:190px;resize:vertical;line-height:1.45}
+.main{padding:18px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.tableWrap{overflow:auto;border-radius:16px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;min-width:930px;background:rgba(12,16,22,.72)}
+th,td{text-align:left;padding:13px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--gold);font-size:12px;text-transform:uppercase;letter-spacing:.08em;background:#121720;position:sticky;top:0}
+td{font-size:14px;color:#f3f0e9}
+.small{font-size:12px;color:var(--muted);line-height:1.4}
+.badge{display:inline-block;padding:5px 8px;border-radius:999px;background:#243041;border:1px solid var(--line);font-size:12px;margin:2px;color:#e6e0d5}
+.ok{color:var(--green)} .missing{color:var(--red)}
+.rowActions{display:flex;gap:7px;flex-wrap:wrap}
+.iconBtn{padding:8px 9px;font-size:12px;border-radius:10px}
+.preview{margin-top:18px;padding:18px}
+.previewTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.footer{max-width:1300px;margin:auto;padding:0 22px 28px;color:var(--muted);font-size:12px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.sidebar{position:relative;top:auto}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div>
+    <div class="logo">ChefLink Sydney</div>
+    <h1>Chef Communications Dashboard</h1>
+    <p class="subtitle">Extract chef contact details, filter your list, copy contact data, export CSV, and generate ready-to-send communication content for marketing, onboarding, reminders, and follow-ups.</p>
+  </div>
+  <div class="actions">
+    <button class="primary" onclick="exportCSV()">Export CSV</button>
+    <button onclick="copyAllContacts()">Copy all contacts</button>
+  </div>
+</header>
+
+<section class="grid">
+  <aside class="card sidebar">
+    <div class="logo">Dashboard tools</div>
+    <div class="statGrid">
+      <div class="stat"><b id="totalChefs">0</b><span>Total chefs</span></div>
+      <div class="stat"><b id="withEmail">0</b><span>With email</span></div>
+      <div class="stat"><b id="withPhone">0</b><span>With phone</span></div>
+      <div class="stat"><b id="approvedCount">0</b><span>Approved</span></div>
+    </div>
+    <label>Search chef</label>
+    <input id="search" placeholder="Name, email, phone, cuisine..." oninput="render()" />
+    <label>Communication type</label>
+    <select id="template" onchange="updateMessage()">
+      <option value="intro">Restaurant introduction</option>
+      <option value="college">College graduate opportunity</option>
+      <option value="profile">Profile update reminder</option>
+      <option value="feature">Featured chef marketing</option>
+      <option value="followup">Quick follow-up</option>
+    </select>
+    <label>Selected chef</label>
+    <select id="chefSelect" onchange="updateMessage()"></select>
+    <label>Generated message</label>
+    <textarea id="message"></textarea>
+    <div class="actions" style="margin-top:10px">
+      <button class="primary" onclick="copyMessage()">Copy message</button>
+      <button onclick="emailSelected()">Email selected</button>
+    </div>
+  </aside>
+
+  <main class="card main">
+    <div class="toolbar">
+      <button onclick="setFilter('all')">All</button>
+      <button onclick="setFilter('email')">With email</button>
+      <button onclick="setFilter('phone')">With phone</button>
+      <button onclick="setFilter('missing')">Missing contact</button>
+      <button onclick="setFilter('approved')">Approved</button>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th><th>Surname</th><th>Email</th><th>Telephone</th><th>Location</th><th>Cuisine / Work</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="card preview">
+      <div class="previewTitle">
+        <div><b>Contact preview</b><div class="small">Click any chef row action to copy, email, call, or prepare communication.</div></div>
+        <button onclick="copyFilteredContacts()">Copy filtered list</button>
+      </div>
+    </div>
+  </main>
+</section>
+<footer class="footer">This page is standalone. You can upload it to your website or open it locally in a browser. Data is embedded from your current ChefLink JSON export.</footer>
+
+<script>
+const chefs = [{"id": 25, "name": "James Collins", "first_name": "James", "surname": "Collins", "email": "jamesseamus760@gmail.com", "phone": "0417 699 581", "title": "Chef · Educator · Chocolatier · Sydney, Australia", "location": "Mascot, NSW 2020", "availability": "Flexible", "cuisine": ["Chocolate", "Patisserie", "French", "Commercial Cookery", "Culinary Education"], "work_type": ["Training", "Education", "Consulting", "Events", "Contract"], "summary": "A teacher and trade-qualified chef with culinary knowledge built on sound French techniques and traditions, spanning bistro, four- and five-star hotels, Michelin-starred and hatted restaurants, chocolate artistry and vocational education.", "instagram": "", "approved": true, "featured": true, "paid": false}, {"id": 24, "name": "Reinaldo Surname", "first_name": "Reinaldo", "surname": "Surname", "email": "Reinaldo4@bigpond.com", "phone": "0400 000 000", "title": "Trainer & Assessor · Chef · Sydney, Australia", "location": "Sydney, Australia", "availability": "Flexible", "cuisine": ["Hospitality", "Commercial Cookery", "Training", "Modern Australian"], "work_type": ["Training", "Education", "Hospitality", "Contract"], "summary": "A dedicated and highly motivated Trainer and Assessor with extensive experience delivering vocational training to international students at Registered Training Organisations across Australia and the United States.", "instagram": "", "approved": true, "featured": true, "paid": false}, {"id": 23, "name": "Robin Bessege", "first_name": "Robin", "surname": "Bessege", "email": "robin.bessegepro@gmail.com", "phone": "0431 546 823", "title": "Pastry Chef & Educator · French-Trained Modern Pâtisserie", "location": "", "availability": "Flexible", "cuisine": ["French", "Pastry", "Fine Dining"], "work_type": ["Part-Time", "Contract", "Events"], "summary": "French-trained pastry chef and educator specialising in modern pâtisserie, chocolate and sugar artistry.", "instagram": "", "approved": true, "featured": true, "paid": false}];
+let filter = 'all';
+function cleanPhone(phone) { return (phone||'').replace(/[^+\d]/g,''); }
+function esc(s) { return String(s||'').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function chefLine(c) { return `${c.first_name}	${c.surname}	${c.email||''}	${c.phone||''}	${c.location||''}`; }
+function setFilter(f) { filter=f; render(); }
+function filtered() {
+  const q=document.getElementById('search').value.toLowerCase().trim();
+  return chefs.filter(c=>{
+    const hay=[c.name,c.email,c.phone,c.location,c.title,(c.cuisine||[]).join(' '),(c.work_type||[]).join(' ')].join(' ').toLowerCase();
+    if(q && !hay.includes(q)) return false;
+    if(filter==='email') return !!c.email;
+    if(filter==='phone') return !!c.phone;
+    if(filter==='missing') return !c.email || !c.phone;
+    if(filter==='approved') return !!c.approved;
+    return true;
+  });
+}
+function renderStats() {
+  document.getElementById('totalChefs').textContent=chefs.length;
+  document.getElementById('withEmail').textContent=chefs.filter(c=>c.email).length;
+  document.getElementById('withPhone').textContent=chefs.filter(c=>c.phone).length;
+  document.getElementById('approvedCount').textContent=chefs.filter(c=>c.approved).length;
+}
+function renderChefSelect() {
+  const sel=document.getElementById('chefSelect');
+  const current=sel.value;
+  sel.innerHTML=chefs.map((c,i)=>`<option value="${i}">${esc(c.name||'Chef '+(i+1))}</option>`).join('');
+  if(current) sel.value=current;
+}
+function render() {
+  const rows=document.getElementById('rows');
+  rows.innerHTML=filtered().map((c)=>{
+    const idx=chefs.indexOf(c);
+    const cuisine=(c.cuisine||[]).slice(0,3).map(x=>`<span class="badge">${esc(x)}</span>`).join('');
+    const work=(c.work_type||[]).slice(0,2).map(x=>`<span class="badge">${esc(x)}</span>`).join('');
+    return `<tr>
+      <td><b>${esc(c.first_name)}</b><div class="small">${esc(c.title)}</div></td>
+      <td>${esc(c.surname)}</td>
+      <td>${c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : '<span class="missing">Missing</span>'}</td>
+      <td>${c.phone ? `<a href="tel:${cleanPhone(c.phone)}">${esc(c.phone)}</a>` : '<span class="missing">Missing</span>'}</td>
+      <td>${esc(c.location)}</td>
+      <td>${cuisine}<br>${work}</td>
+      <td><span class="${c.approved?'ok':'missing'}">${c.approved?'Approved':'Not approved'}</span><div class="small">${c.featured?'Featured · ':''}${c.paid?'Paid':'Trial / unpaid'}</div></td>
+      <td><div class="rowActions">
+        <button class="iconBtn" onclick="selectChef(${idx})">Message</button>
+        <button class="iconBtn" onclick="copyChef(${idx})">Copy</button>
+        ${c.email?`<a class="btn iconBtn" href="mailto:${esc(c.email)}?subject=ChefLink Sydney&body=${encodeURIComponent(makeMessage(c))}">Email</a>`:''}
+        ${c.phone?`<a class="btn iconBtn" href="tel:${cleanPhone(c.phone)}">Call</a>`:''}
+        ${c.phone?`<a class="btn iconBtn" target="_blank" href="https://wa.me/${cleanPhone(c.phone).replace(/^0/,'61')}?text=${encodeURIComponent(makeMessage(c))}">WhatsApp</a>`:''}
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+function selectChef(i) { document.getElementById('chefSelect').value=i; updateMessage(); window.scrollTo({top:0,behavior:'smooth'}); }
+function makeMessage(c) {
+  const type=document.getElementById('template')?.value || 'intro';
+  const first=c.first_name || c.name || 'Chef';
+  const cuisine=(c.cuisine||[]).slice(0,3).join(', ');
+  const portfolioLine=`Your ChefLink profile highlights: ${c.title||'your chef profile'}${c.location?' based in '+c.location:''}.`;
+  const templates={
+    intro:`Hi ${first},
+
+I am reaching out from ChefLink Sydney. We are connecting chefs with restaurants, colleges and hospitality partners looking for skilled culinary talent.
+
+${portfolioLine}
+
+Would you be open for me to share your profile with suitable hospitality contacts?
+
+Kind regards,
+Marc`,
+    college:`Hi ${first},
+
+ChefLink Sydney is working on opportunities to showcase chefs and hospitality graduates to restaurants and industry partners. Your profile can help demonstrate real career pathways and professional standards.
+
+${cuisine?`Your key areas include ${cuisine}.`:''}
+
+I would like to include you in future communication where suitable.
+
+Kind regards,
+Marc`,
+    profile:`Hi ${first},
+
+Just a quick reminder to check your ChefLink profile and make sure your photo, bio, availability, cuisine style and contact details are up to date.
+
+Updated profiles are easier to share with restaurants and hospitality partners.
+
+Kind regards,
+Marc`,
+    feature:`Hi ${first},
+
+I am preparing ChefLink Sydney marketing content to showcase selected chef profiles. Your background would be a strong example for hospitality partners.
+
+${portfolioLine}
+
+Please let me know if you are happy for your profile to be featured.
+
+Kind regards,
+Marc`,
+    followup:`Hi ${first},
+
+Just following up regarding your ChefLink Sydney profile.
+
+Please let me know if your contact details, availability or profile information need any update.
+
+Kind regards,
+Marc`
+  };
+  return templates[type];
+}
+function updateMessage() {
+  const c=chefs[Number(document.getElementById('chefSelect').value)||0];
+  document.getElementById('message').value=makeMessage(c);
+}
+async function copyText(t) { await navigator.clipboard.writeText(t); alert('Copied'); }
+function copyChef(i) { copyText('First name	Surname	Email	Telephone	Location
+'+chefLine(chefs[i])); }
+function copyAllContacts() { copyText('First name	Surname	Email	Telephone	Location
+'+chefs.map(chefLine).join('
+')); }
+function copyFilteredContacts() { copyText('First name	Surname	Email	Telephone	Location
+'+filtered().map(chefLine).join('
+')); }
+function copyMessage() { copyText(document.getElementById('message').value); }
+function emailSelected() {
+  const c=chefs[Number(document.getElementById('chefSelect').value)||0];
+  if(!c.email) return alert('No email available for this chef.');
+  location.href=`mailto:${c.email}?subject=${encodeURIComponent('ChefLink Sydney')}&body=${encodeURIComponent(document.getElementById('message').value)}`;
+}
+function exportCSV() {
+  const header=['First Name','Surname','Email','Telephone','Location','Title','Cuisine','Work Type','Approved','Featured','Paid'];
+  const rows=filtered().map(c=>[c.first_name,c.surname,c.email,c.phone,c.location,c.title,(c.cuisine||[]).join('; '),(c.work_type||[]).join('; '),c.approved,c.featured,c.paid]);
+  const csv=[header,...rows].map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('
+');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='cheflink_contacts.csv'; a.click(); URL.revokeObjectURL(url);
+}
+renderStats(); renderChefSelect(); render(); updateMessage();
+</script>
+</body>
+</html>
