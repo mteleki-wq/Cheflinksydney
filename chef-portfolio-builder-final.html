@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chef Portfolio Builder — ChefLink Sydney</title>
+
+<!-- ============================================================
+     CHEF PORTFOLIO BUILDER — ChefLink Sydney admin tool
+     ------------------------------------------------------------
+     Single-file app. No backend. Host on GitHub Pages or cPanel.
+
+     WHAT IT DOES
+     1. Upload a PDF/Word resume (or paste text) → auto-extracts
+        name, email, phone, years, links, skills, certs, cuisines
+        and pre-fills the form.
+     2. Upload 5 photos (profile + 4 dishes) with live previews.
+     3. Generates clean JSON ready for the ChefLink Sydney
+        importer / Supabase.
+     4. Live portfolio preview styled like the ChefLink directory.
+
+     LIBRARIES (loaded from cdnjs at runtime, nothing to install)
+     - pdf.js  → reads text out of PDF resumes
+     - mammoth → reads text out of .docx resumes
+
+     EDITING GUIDE
+     - Colours + fonts: see the :root design tokens below.
+     - Cuisine / work-type chip options: search "CHIP OPTIONS".
+     - JSON shape: search "buildChefJSON" — one function builds
+       the whole object, edit keys there to match your importer.
+     ============================================================ -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
+<style>
+/* ============ DESIGN TOKENS (ChefLink Sydney palette) ============ */
+:root{
+  --ink:        #211d17;   /* near-black text */
+  --charcoal:   #14110c;   /* nav / dark blocks */
+  --gold:       #b08c3e;   /* ChefLink gold */
+  --gold-soft:  #c9a659;
+  --cream:      #f7f5f0;   /* page background */
+  --panel:      #f0ece1;   /* card panels */
+  --panel-warm: #f6f0dd;   /* highlight band (graduate box) */
+  --line:       #e3ddcf;   /* hairline borders */
+  --muted:      #8d867a;   /* secondary text */
+  --white:      #ffffff;
+  --ok:         #4c7a4c;
+  --danger:     #a04b3a;
+  --radius: 6px;
+  --shadow: 0 10px 30px rgba(20,17,12,.08);
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+html{ scroll-behavior:smooth; }
+body{
+  font-family:'Jost',sans-serif;
+  font-weight:300;
+  background:var(--cream);
+  color:var(--ink);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ============ NAV ============ */
+.nav{
+  background:var(--charcoal);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px clamp(20px,4vw,48px);
+  position:sticky; top:0; z-index:50;
+}
+.brand{ font-family:'Playfair Display',serif; font-size:26px; color:var(--gold); letter-spacing:.5px; }
+.brand span{ font-family:'Jost',sans-serif; font-size:11px; color:#cfc8b8; letter-spacing:4px; margin-left:8px; text-transform:uppercase; font-weight:300; }
+.nav-tag{
+  font-size:11px; letter-spacing:3px; text-transform:uppercase;
+  color:var(--gold-soft); border:1px solid rgba(201,166,89,.45);
+  padding:8px 16px; border-radius:999px; white-space:nowrap;
+}
+
+/* ============ LAYOUT ============ */
+.wrap{ max-width:960px; margin:0 auto; padding:48px clamp(18px,4vw,40px) 120px; }
+.eyebrow{ font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--gold); font-weight:500; }
+h1{ font-family:'Playfair Display',serif; font-size:clamp(34px,5vw,52px); font-weight:600; line-height:1.1; margin:10px 0 8px; }
+.lede{ color:var(--muted); max-width:56ch; }
+
+.section{ margin-top:64px; }
+.section-title{
+  font-family:'Playfair Display',serif; font-size:26px; font-weight:500;
+  padding-bottom:12px; border-bottom:1px solid var(--line); margin-bottom:24px;
+}
+.section-note{ color:var(--muted); font-size:14.5px; margin:-14px 0 22px; }
+
+/* ============ FORM ============ */
+label.f-label{
+  display:block; font-size:11.5px; letter-spacing:2.5px; text-transform:uppercase;
+  color:#6f695d; font-weight:400; margin:0 0 8px;
+}
+.req::after{ content:" *"; color:var(--gold); }
+input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],select,textarea{
+  width:100%; background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
+  padding:13px 15px; font-family:'Jost',sans-serif; font-weight:300; font-size:15.5px; color:var(--ink);
+  transition:border-color .15s, box-shadow .15s;
+}
+textarea{ resize:vertical; min-height:110px; }
+input:focus,select:focus,textarea:focus{ outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(176,140,62,.12); }
+::placeholder{ color:#b8b1a2; }
+
+.grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:22px 26px; }
+.field{ margin-bottom:22px; }
+@media (max-width:640px){ .grid-2{ grid-template-columns:1fr; gap:0; } }
+
+/* ============ CHIPS (work type / cuisines) ============ */
+.chips{ display:flex; flex-wrap:wrap; gap:10px; }
+.chip{
+  border:1px solid var(--line); background:var(--white); border-radius:999px;
+  padding:9px 20px; font-size:14.5px; cursor:pointer; user-select:none;
+  transition:all .15s; font-family:'Jost',sans-serif; font-weight:300; color:var(--ink);
+}
+.chip:hover{ border-color:var(--gold-soft); }
+.chip.on{ background:var(--charcoal); color:var(--gold-soft); border-color:var(--charcoal); }
+
+/* ============ FLAG TOGGLES ============ */
+.flagbox{
+  display:flex; gap:14px; align-items:flex-start; background:var(--panel-warm);
+  border-left:3px solid var(--gold); border-radius:var(--radius);
+  padding:18px 20px; margin-bottom:14px; cursor:pointer;
+}
+.flagbox input{ margin-top:5px; width:18px; height:18px; accent-color:var(--gold); flex:none; }
+.flagbox b{ font-weight:500; }
+.flagbox small{ display:block; color:#8a8062; font-size:13.5px; }
+
+/* ============ UPLOAD ZONES ============ */
+.dropzone{
+  border:1.5px dashed #cfc7b4; border-radius:var(--radius); background:rgba(255,255,255,.5);
+  text-align:center; padding:34px 16px; cursor:pointer; transition:all .15s; position:relative; overflow:hidden;
+}
+.dropzone:hover{ border-color:var(--gold); background:rgba(255,255,255,.85); }
+.dropzone .dz-icon{ font-size:26px; display:block; margin-bottom:6px; }
+.dropzone .dz-text{ color:var(--muted); font-size:14.5px; }
+.dropzone.has-img{ padding:0; border-style:solid; border-color:var(--line); }
+.dropzone img{ display:block; width:100%; height:210px; object-fit:cover; }
+.dz-clear{
+  position:absolute; top:8px; right:8px; background:rgba(20,17,12,.75); color:#fff;
+  border:none; border-radius:999px; width:28px; height:28px; cursor:pointer; font-size:14px; line-height:1;
+  display:none;
+}
+.dropzone.has-img .dz-clear{ display:block; }
+.dz-name{ font-size:12px; color:var(--muted); margin-top:6px; word-break:break-all; min-height:16px; }
+
+.img-grid{ display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+@media (max-width:640px){ .img-grid{ grid-template-columns:1fr; } }
+
+/* ============ RESUME PANEL ============ */
+.resume-panel{ background:var(--panel); border-radius:var(--radius); padding:26px; }
+.resume-drop{ background:var(--white); }
+.or-rule{ display:flex; align-items:center; gap:14px; color:var(--muted); font-size:12px; letter-spacing:3px; text-transform:uppercase; margin:20px 0; }
+.or-rule::before,.or-rule::after{ content:""; flex:1; height:1px; background:var(--line); }
+.parse-status{ font-size:14px; margin-top:12px; min-height:20px; }
+.parse-status.ok{ color:var(--ok); }
+.parse-status.err{ color:var(--danger); }
+
+/* ============ BUTTONS ============ */
+.btn{
+  font-family:'Jost',sans-serif; letter-spacing:2.5px; text-transform:uppercase; font-size:13px; font-weight:500;
+  padding:16px 30px; border-radius:var(--radius); border:none; cursor:pointer; transition:all .15s;
+}
+.btn-dark{ background:var(--charcoal); color:#f3eee2; width:100%; padding:20px; }
+.btn-dark:hover{ background:#000; }
+.btn-gold{ background:var(--gold); color:#fff; }
+.btn-gold:hover{ background:#9a7a34; }
+.btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--ink); }
+.btn-ghost:hover{ border-color:var(--gold); color:var(--gold); }
+.btn-sm{ padding:11px 20px; font-size:12px; }
+.btn-row{ display:flex; flex-wrap:wrap; gap:12px; margin-top:18px; }
+.btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+/* ============ JSON OUTPUT ============ */
+.json-out{
+  display:none; background:var(--charcoal); color:#d8d2c2; border-radius:var(--radius);
+  padding:22px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px;
+  line-height:1.55; white-space:pre; overflow:auto; max-height:420px; margin-top:20px;
+  -webkit-overflow-scrolling:touch;
+}
+.toast{
+  position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--charcoal); color:var(--gold-soft); padding:13px 26px; border-radius:999px;
+  font-size:13px; letter-spacing:2px; text-transform:uppercase; opacity:0; pointer-events:none;
+  transition:all .3s; z-index:200;
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ============ PREVIEW MODAL ============ */
+.modal{
+  display:none; position:fixed; inset:0; background:rgba(15,12,8,.8); z-index:100;
+  overflow-y:auto; -webkit-overflow-scrolling:touch; padding:5vh 16px;
+}
+.modal.open{ display:block; }
+.modal-inner{ max-width:760px; margin:0 auto; background:var(--cream); border-radius:10px; overflow:hidden; box-shadow:var(--shadow); }
+.modal-close{
+  position:sticky; top:0; z-index:5; display:flex; justify-content:space-between; align-items:center;
+  background:var(--charcoal); color:var(--gold-soft); padding:14px 22px;
+  font-size:11px; letter-spacing:3px; text-transform:uppercase;
+}
+.modal-close button{ background:none; border:1px solid rgba(201,166,89,.4); color:var(--gold-soft); border-radius:999px; padding:6px 16px; cursor:pointer; letter-spacing:2px; text-transform:uppercase; font-size:11px; }
+
+/* Preview — hero */
+.pv-hero{ position:relative; height:280px; background:var(--panel); }
+.pv-hero img{ width:100%; height:100%; object-fit:cover; }
+.pv-hero-shade{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(10,8,5,.05) 40%,rgba(10,8,5,.72)); }
+.pv-hero-txt{ position:absolute; left:28px; right:28px; bottom:22px; color:#fff; }
+.pv-hero-txt .eyebrow{ color:var(--gold-soft); }
+.pv-name{ font-family:'Playfair Display',serif; font-size:clamp(28px,4.5vw,40px); font-weight:600; line-height:1.1; }
+.pv-title{ color:#e8e2d2; font-size:15px; margin-top:4px; }
+.pv-badges{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+.pv-badge{ font-size:10.5px; letter-spacing:2px; text-transform:uppercase; padding:5px 12px; border-radius:999px; background:rgba(201,166,89,.2); border:1px solid rgba(201,166,89,.55); color:var(--gold-soft); }
+
+.pv-body{ padding:28px; }
+.pv-meta{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:16px; background:var(--panel); border-radius:var(--radius); padding:18px 20px; margin-bottom:26px; }
+.pv-meta div small{ display:block; font-size:10.5px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+.pv-meta div b{ font-weight:500; font-size:15px; }
+.pv-sec{ font-family:'Playfair Display',serif; font-size:20px; margin:26px 0 10px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+.pv-chipline{ display:flex; flex-wrap:wrap; gap:8px; }
+.pv-chipline span{ border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 15px; font-size:13.5px; }
+.pv-gallery{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+.pv-gallery figure{ border-radius:var(--radius); overflow:hidden; background:var(--panel); }
+.pv-gallery img{ width:100%; height:150px; object-fit:cover; display:block; }
+.pv-gallery figcaption{ font-size:12px; color:var(--muted); padding:7px 10px; }
+.pv-bio{ color:#4c463c; }
+.pv-empty{ color:var(--muted); font-size:14px; font-style:italic; }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav class="nav">
+  <div class="brand">ChefLink <span>Sydney</span></div>
+  <div class="nav-tag">Admin · Portfolio Builder</div>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow">Chef Portal · Admin Tool</p>
+  <h1>Chef Portfolio Builder</h1>
+  <p class="lede">Upload a resume and five photos, review the details, then export a clean JSON file ready to import straight into ChefLink Sydney or Supabase.</p>
+
+  <!-- ============ 1. RESUME ============ -->
+  <section class="section" id="sec-resume">
+    <h2 class="section-title">1. Resume</h2>
+    <p class="section-note">Upload a PDF or Word resume, or paste the text. The builder will extract what it can and pre-fill the form below.</p>
+
+    <div class="resume-panel">
+      <div class="dropzone resume-drop" id="resumeDrop">
+        <span class="dz-icon">📄</span>
+        <span class="dz-text">Tap to upload resume — PDF or Word (.docx)</span>
+        <input type="file" id="resumeFile" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+      </div>
+      <div class="parse-status" id="parseStatus"></div>
+
+      <div class="or-rule">or paste text</div>
+
+      <textarea id="resumePaste" rows="6" placeholder="Paste the resume text here…"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-gold btn-sm" id="btnExtract">Extract &amp; pre-fill form</button>
+        <button class="btn btn-ghost btn-sm" id="btnClearResume">Clear resume</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. CHEF INFORMATION ============ -->
+  <section class="section" id="sec-info">
+    <h2 class="section-title">2. Chef Information</h2>
+
+    <div class="grid-2">
+      <div class="field"><label class="f-label req" for="firstName">First name</label><input type="text" id="firstName" placeholder="e.g. Marc"></div>
+      <div class="field"><label class="f-label req" for="surname">Surname</label><input type="text" id="surname" placeholder="e.g. Dupont"></div>
+      <div class="field"><label class="f-label req" for="email">Email</label><input type="email" id="email" placeholder="chef@email.com"></div>
+      <div class="field"><label class="f-label" for="phone">Phone</label><input type="tel" id="phone" placeholder="04xx xxx xxx"></div>
+      <div class="field">
+        <label class="f-label" for="location">Location</label>
+        <select id="location">
+          <option>Sydney CBD</option><option>Inner West</option><option>Eastern Suburbs</option>
+          <option>North Shore</option><option>Northern Beaches</option><option>Western Sydney</option>
+          <option>South Sydney</option><option>Sutherland Shire</option><option>Greater Sydney</option>
+        </select>
+      </div>
+      <div class="field"><label class="f-label" for="role">Current role / professional title</label><input type="text" id="role" placeholder="e.g. Head Chef — French Fine Dining"></div>
+      <div class="field"><label class="f-label" for="years">Years of experience</label><input type="number" id="years" min="0" max="60" placeholder="e.g. 8"></div>
+      <div class="field"><label class="f-label" for="rate">Hourly / day rate</label><input type="text" id="rate" placeholder="e.g. $85–$120/hr"></div>
+      <div class="field"><label class="f-label" for="link">LinkedIn or website</label><input type="url" id="link" placeholder="https://…"></div>
+      <div class="field"><label class="f-label" for="instagram">Instagram</label><input type="text" id="instagram" placeholder="@yourhandle"></div>
+    </div>
+
+    <div class="field"><label class="f-label" for="summary">One-line summary</label><input type="text" id="summary" placeholder="One sentence for the directory card"></div>
+    <div class="field"><label class="f-label" for="bio">Short bio</label><textarea id="bio" placeholder="Background, experience and cooking philosophy…"></textarea></div>
+    <div class="field"><label class="f-label" for="skills">Skills (comma separated)</label><input type="text" id="skills" placeholder="e.g. Menu development, Pastry, Butchery, Food costing"></div>
+    <div class="field"><label class="f-label" for="certs">Certifications / qualifications (comma separated)</label><input type="text" id="certs" placeholder="e.g. Cert IV Kitchen Management, Advanced Diploma of Hospitality"></div>
+    <div class="field"><label class="f-label" for="restaurants">Previous restaurants (comma separated)</label><input type="text" id="restaurants" placeholder="e.g. Quay, Bennelong, Aria"></div>
+  </section>
+
+  <!-- ============ 3. WORK DETAILS ============ -->
+  <section class="section" id="sec-work">
+    <h2 class="section-title">3. Work Details</h2>
+
+    <div class="field">
+      <label class="f-label">Work type</label>
+      <!-- CHIP OPTIONS: work types -->
+      <div class="chips" id="workChips" data-values="Casual,Part-Time,Contract,Events,Full-Time"></div>
+    </div>
+
+    <div class="field"><label class="f-label" for="availability">Availability</label><input type="text" id="availability" placeholder="e.g. Weekends / Casual / Immediate"></div>
+
+    <div class="field">
+      <label class="f-label">Cuisine specialties — tap all that apply</label>
+      <!-- CHIP OPTIONS: cuisines (same list as ChefLink profile form) -->
+      <div class="chips" id="cuisineChips" data-values="French,Italian,Japanese,Modern Australian,Asian,Pastry,Bakery,Seafood,Fine Dining,Catering,Events,Café,Hotel Banquet"></div>
+    </div>
+
+    <label class="f-label" style="margin-top:26px">Directory flags</label>
+    <label class="flagbox"><input type="checkbox" id="flagGraduate"><span><b>🎓 Recent graduate</b><small>Featured in the New Graduate Chefs spotlight — restaurants looking for fresh talent will find them here.</small></span></label>
+    <label class="flagbox"><input type="checkbox" id="flagGold"><span><b>Gold member</b><small>Gold opt-in styling in the directory.</small></span></label>
+    <label class="flagbox"><input type="checkbox" id="flagFeatured"><span><b>Featured</b><small>Pinned near the top of Find Chefs.</small></span></label>
+    <label class="flagbox"><input type="checkbox" id="flagSpotlight"><span><b>Spotlight</b><small>Included in the homepage spotlight band.</small></span></label>
+  </section>
+
+  <!-- ============ 4. PHOTOS ============ -->
+  <section class="section" id="sec-photos">
+    <h2 class="section-title">4. Photos</h2>
+    <p class="section-note">Five photos: one profile photo and four dishes. The first dish is used as the hero / main signature dish.</p>
+
+    <div class="img-grid" id="imgGrid">
+      <!-- Image slots are generated by JS from IMAGE_SLOTS below -->
+    </div>
+
+    <label class="flagbox" style="margin-top:24px">
+      <input type="checkbox" id="embedImages" checked>
+      <span><b>Embed images in the JSON (base64)</b><small>Tick to include image data directly in the JSON — ideal for the ChefLink importer. Untick to include filenames only (upload the image files separately).</small></span>
+    </label>
+  </section>
+
+  <!-- ============ 5. GENERATE & EXPORT ============ -->
+  <section class="section" id="sec-export">
+    <h2 class="section-title">5. Generate &amp; Export</h2>
+
+    <button class="btn btn-dark" id="btnGenerate">Generate ChefLink JSON</button>
+
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" id="btnPreview">Preview portfolio</button>
+      <button class="btn btn-ghost btn-sm" id="btnCopy" disabled>Copy JSON</button>
+      <button class="btn btn-ghost btn-sm" id="btnDownload" disabled>Download JSON</button>
+      <button class="btn btn-ghost btn-sm" id="btnReset">Reset form</button>
+    </div>
+
+    <pre class="json-out" id="jsonOut"></pre>
+  </section>
+</main>
+
+<!-- ============ PREVIEW MODAL ============ -->
+<div class="modal" id="previewModal">
+  <div class="modal-inner">
+    <div class="modal-close"><span>Portfolio Preview — as it appears on ChefLink Sydney</span><button id="btnCloseModal">Close</button></div>
+    <div id="previewContent"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================================================================
+   CHEF PORTFOLIO BUILDER — script
+   ================================================================ */
+'use strict';
+
+/* ---------- pdf.js worker ---------- */
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+/* ---------- tiny helpers ---------- */
+const $  = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+const toast = (msg) => {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
+};
+
+/* ================================================================
+   IMAGE SLOTS — profile + 4 dishes.
+   key      → key used in the JSON
+   label    → label shown above the upload box
+   ================================================================ */
+const IMAGE_SLOTS = [
+  { key:'profile', label:'Chef profile photo (face)', icon:'👤' },
+  { key:'dish1',   label:'Main signature dish (hero)', icon:'🍽️' },
+  { key:'dish2',   label:'Dish image 2', icon:'🍽️' },
+  { key:'dish3',   label:'Dish image 3', icon:'🍽️' },
+  { key:'dish4',   label:'Dish image 4', icon:'🍽️' },
+];
+/* imageStore[key] = { name, dataUrl } */
+const imageStore = {};
+
+/* Build the image upload grid */
+const imgGrid = $('#imgGrid');
+IMAGE_SLOTS.forEach(slot => {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <label class="f-label">${slot.label}</label>
+    <div class="dropzone" data-key="${slot.key}">
+      <span class="dz-icon">${slot.icon}</span>
+      <span class="dz-text">Tap to upload</span>
+      <img alt="" style="display:none">
+      <button type="button" class="dz-clear" title="Remove">✕</button>
+      <input type="file" accept="image/*" hidden>
+    </div>
+    <div class="dz-name"></div>`;
+  imgGrid.appendChild(wrap);
+
+  const dz    = wrap.querySelector('.dropzone');
+  const input = wrap.querySelector('input');
+  const img   = wrap.querySelector('img');
+  const nameEl= wrap.querySelector('.dz-name');
+
+  dz.addEventListener('click', (e) => { if (e.target.classList.contains('dz-clear')) return; input.click(); });
+  wrap.querySelector('.dz-clear').addEventListener('click', () => {
+    delete imageStore[slot.key];
+    img.src=''; img.style.display='none'; nameEl.textContent='';
+    dz.classList.remove('has-img');
+    dz.querySelector('.dz-icon').style.display=''; dz.querySelector('.dz-text').style.display='';
+  });
+  input.addEventListener('change', () => {
+    const f = input.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      imageStore[slot.key] = { name: f.name, dataUrl: r.result };
+      img.src = r.result; img.style.display='block';
+      dz.classList.add('has-img');
+      dz.querySelector('.dz-icon').style.display='none'; dz.querySelector('.dz-text').style.display='none';
+      nameEl.textContent = f.name;
+    };
+    r.readAsDataURL(f);
+    input.value = ''; // allow re-selecting the same file
+  });
+});
+
+/* ================================================================
+   CHIP GROUPS — built from data-values attribute
+   ================================================================ */
+function buildChips(containerId){
+  const box = $(containerId);
+  box.dataset.values.split(',').forEach(v => {
+    const c = document.createElement('div');
+    c.className='chip'; c.textContent=v.trim();
+    c.addEventListener('click', () => c.classList.toggle('on'));
+    box.appendChild(c);
+  });
+}
+buildChips('#workChips');
+buildChips('#cuisineChips');
+const chipValues = (id) => $$(id + ' .chip.on').map(c => c.textContent);
+const setChips   = (id, values) => $$(id + ' .chip').forEach(c => {
+  if (values.some(v => v.toLowerCase() === c.textContent.toLowerCase())) c.classList.add('on');
+});
+
+/* ================================================================
+   RESUME READING — PDF (pdf.js) / DOCX (mammoth) / paste
+   ================================================================ */
+const parseStatus = $('#parseStatus');
+$('#resumeDrop').addEventListener('click', () => $('#resumeFile').click());
+
+$('#resumeFile').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  parseStatus.className='parse-status'; parseStatus.textContent = 'Reading ' + f.name + '…';
+  try {
+    let text = '';
+    if (/\.pdf$/i.test(f.name))       text = await readPdf(f);
+    else if (/\.docx$/i.test(f.name)) text = await readDocx(f);
+    else throw new Error('Please upload a PDF or .docx file.');
+
+    $('#resumePaste').value = text.trim();
+    parseStatus.className='parse-status ok';
+    parseStatus.textContent = '✓ ' + f.name + ' read — tap “Extract & pre-fill form”.';
+  } catch (err) {
+    parseStatus.className='parse-status err';
+    parseStatus.textContent = '✕ Could not read file: ' + err.message;
+  }
+  e.target.value='';
+});
+
+async function readPdf(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  let out = '';
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    /* Rebuild real lines from Y coordinates — critical for detecting
+       the chef's name on the top line of the resume */
+    const rows = [];
+    let lastY = null, row = [];
+    for (const item of tc.items) {
+      const y = Math.round(item.transform[5]);
+      if (lastY !== null && Math.abs(y - lastY) > 4) { rows.push(row.join(' ')); row = []; }
+      if (item.str.trim()) row.push(item.str.trim());
+      lastY = y;
+    }
+    if (row.length) rows.push(row.join(' '));
+    out += rows.join('\n') + '\n';
+  }
+  return out;
+}
+async function readDocx(file){
+  const buf = await file.arrayBuffer();
+  const res = await mammoth.extractRawText({ arrayBuffer: buf });
+  return res.value;
+}
+
+/* ================================================================
+   RESUME EXTRACTION ENGINE
+   ------------------------------------------------------------
+   Goal: attempt EVERY field on the form. If the resume has it,
+   it lands in the right box. If not, the field is left alone.
+
+   Pipeline:
+   1. splitSections()  → break resume into profile / experience /
+                         education / skills sections
+   2. one extractor per form field (name, email, phone, location,
+      role, years, rate, links, availability, work types,
+      cuisines, skills, certs, restaurants)
+   3. buildBio() / buildSummary() → showcase copy built from the
+      chef's own profile section, or composed from the facts —
+      relevant highlights only, never the whole resume
+   4. a report shows exactly what was found and what wasn't
+   ================================================================ */
+
+/* ---------- keyword banks (edit freely) ---------- */
+const CUISINE_WORDS = ['French','Italian','Japanese','Modern Australian','Asian','Pastry','Bakery','Seafood','Fine Dining','Catering','Events','Café','Cafe','Hotel Banquet','Thai','Chinese','Korean','Vietnamese','Spanish','Greek','Middle Eastern','Indian'];
+
+const SKILL_WORDS = ['menu development','menu planning','menu design','food costing','cost control','stock control','ordering','rostering','plating','presentation','butchery','fish filleting','pastry','baking','bread','sous vide','fermentation','charcuterie','haccp','food safety','allergen management','team leadership','staff training','mentoring','kitchen management','banquets','à la carte','a la carte','function catering','high-volume','high volume','garde manger','saucier','wine pairing','inventory','supplier management','recipe development','dietary requirements','service under pressure'];
+
+const CERT_PATTERNS = [
+  /certificate\s+(?:i{1,3}|iv|[1-4])\s+in\s+[a-z ,&()-]+/gi,
+  /cert\s*(?:i{1,3}|iv|[1-4])\s+[a-z ,&()-]+/gi,
+  /(?:advanced\s+)?diploma\s+(?:of|in)\s+[a-z ,&()-]+/gi,
+  /bachelor\s+of\s+[a-z ,&()-]+/gi,
+  /trade\s+certificate[a-z ,&()-]*/gi,
+  /commercial\s+cookery\s+apprenticeship/gi,
+  /food\s+safety\s+supervisor(?:\s+certificate)?/gi,
+  /food\s+handler(?:'s)?\s+certificate/gi,
+  /first\s+aid(?:\s+certificate)?/gi,
+  /\brsa\b/gi, /\bhaccp(?:\s+certified)?\b/gi,
+  /(?:le\s+cordon\s+bleu|tafe\s+nsw|william\s+angliss)[a-z ,&()-]*/gi,
+];
+
+/* Sydney suburb → ChefLink region (used for the Location dropdown) */
+const LOCATION_MAP = {
+  'Sydney CBD':       ['sydney cbd','cbd','haymarket','darling harbour','barangaroo','pyrmont','surry hills','darlinghurst','potts point','the rocks','ultimo','circular quay','chippendale','redfern'],
+  'Inner West':       ['inner west','newtown','marrickville','leichhardt','ashfield','balmain','glebe','annandale','enmore','dulwich hill','petersham','burwood','strathfield'],
+  'Eastern Suburbs':  ['eastern suburbs','bondi','coogee','randwick','paddington','double bay','maroubra','bronte','rose bay','woollahra','kensington','vaucluse'],
+  'North Shore':      ['north shore','chatswood','north sydney','mosman','crows nest','st leonards','lane cove','willoughby','hornsby','neutral bay','gordon'],
+  'Northern Beaches': ['northern beaches','manly','dee why','brookvale','mona vale','narrabeen','avalon','freshwater','newport'],
+  'Western Sydney':   ['western sydney','parramatta','blacktown','penrith','liverpool','auburn','bankstown','fairfield','castle hill','olympic park'],
+  'South Sydney':     ['hurstville','kogarah','rockdale','mascot','botany','brighton-le-sands','sans souci','st george','miranda? no'],
+  'Sutherland Shire': ['sutherland shire','cronulla','sutherland','miranda','caringbah','engadine'],
+};
+
+/* Chef roles, most senior first — earliest match in the experience
+   section wins (resumes are reverse-chronological, so earliest ≈ most recent) */
+const ROLE_RANK = ['executive chef','executive sous chef','head chef','chef de cuisine','senior sous chef','sous chef','pastry chef','senior chef de partie','chef de partie','demi chef','commis chef','apprentice chef','kitchen manager','line cook','cook','chef'];
+
+const VENUE_WORDS = /\b(restaurant|bistro|brasserie|hotel|café|cafe|catering|dining|grill|eatery|club|resort|bakery|patisserie|trattoria|osteria|izakaya|group)\b/i;
+/* Words that describe a career or a document — never part of a
+   person's name. Used to strip title suffixes ("Amelia Ford Culinary
+   Professional" → Amelia Ford) and to reject heading lines outright. */
+const CAREER_WORDS = new Set(['chef','cook','cookery','culinary','kitchen','pastry','sous','commis','apprentice','baker','barista','hospitality','catering','caterer','food','beverage','professional','director','executive','manager','management','supervisor','coordinator','consultant','trainer','assessor','specialist','head','senior','junior','certified','qualified','experienced','passionate','resume','curriculum','vitae','cv','portfolio','profile','summary','career','objective','statement','contact','address','mobile','phone','email','references','referee','referees','de','partie','demi','cuisine','line','service','team','leader','seeking','position','name','application','form','document','cover','letter']);
+
+const titleCase = (s) => s.toLowerCase().replace(/(^|[\s'-])[a-z\u00e0-\u00ff]/g, c => c.toUpperCase());
+const sentencesOf = (s) => (s.replace(/\s+/g,' ').match(/[^.!?]+[.!?]+/g) || (s.trim() ? [s.trim()] : [])).map(x => x.trim());
+
+/* ---------- section splitter ---------- */
+const SECTION_HEADS = [
+  ['profile',    /^(professional\s+summary|career\s+(summary|profile|objective)|personal\s+(statement|profile)|summary|profile|about(\s+me)?|objective)$/i],
+  ['experience', /^(professional\s+experience|work\s+(experience|history)|employment(\s+history)?|career\s+history|(relevant\s+)?experience)$/i],
+  ['education',  /^(education(\s+(and|&)\s+training)?|qualifications?|training|certifications?|licen[cs]es?)$/i],
+  ['skills',     /^(key\s+skills|core\s+(skills|competencies)|skills(\s+(and|&)\s+abilities)?|expertise|competencies)$/i],
+  ['referees',   /^(referees?|references?)$/i],
+];
+
+function splitSections(lines){
+  const sec = { _head: [] };
+  let cur = '_head';
+  for (const raw of lines) {
+    const clean = raw.trim().replace(/[:\-\u2013\u2014]+\s*$/,'');
+    let hit = null;
+    if (clean && clean.length <= 40) {
+      for (const [name, rx] of SECTION_HEADS) if (rx.test(clean)) { hit = name; break; }
+    }
+    if (hit) { cur = hit; sec[cur] = sec[cur] || []; continue; }
+    (sec[cur] = sec[cur] || []).push(raw);
+  }
+  return sec;
+}
+
+const isCareerWord = (w) => CAREER_WORDS.has(w.toLowerCase().replace(/[^a-zà-ÿ]/g,''));
+const nameShaped   = (w) => /^[A-ZÀ-Þ][a-zà-ÿ'.-]+$/.test(w) || /^[A-ZÀ-Þ][A-ZÀ-Þ'.-]+$/.test(w);
+
+/* NAME — resumes always carry one. Strategy:
+   1. Scan the first 12 lines. On each line, strip contact noise
+      (emails, URLs, phones), split into chunks, then peel career
+      words off both ends of each chunk. Whatever remains must be
+      2–4 name-shaped words with no career word left in the middle.
+   2. Candidates whose words appear in the email address win
+      (isabella.nguyen@… confirms "Isabella Nguyen").
+   3. Fallbacks: an explicit "Name: …" line, then the email itself. */
+function extractName(lines, email){
+  /* an explicit "Name: …" label is the strongest possible signal — check it first */
+  const labelled = lines.join('\n').match(/^name\s*[:\-]\s*([A-Za-zÀ-ÿ'. -]{4,40})$/im);
+  if (labelled) {
+    const p = titleCase(labelled[1].trim()).split(/\s+/).filter(w => !isCareerWord(w));
+    if (p.length >= 2) return { first: p[0], last: p.slice(1).join(' ') };
+  }
+
+  const emailTokens = email
+    ? email.split('@')[0].toLowerCase().split(/[._-]+/).filter(x => x.length > 1)
+    : [];
+  const candidates = [];
+
+  for (let idx = 0; idx < Math.min(lines.length, 12); idx++) {
+    const line = lines[idx]
+      .replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, ' ')  /* emails   */
+      .replace(/https?:\/\/\S+|www\.\S+/gi, ' ')               /* urls     */
+      .replace(/\+?\d[\d\s().-]{5,}\d/g, ' ')                   /* phones   */
+      .replace(/\(.*?\)/g, ' ');                                 /* brackets */
+
+    for (const chunk of line.split(/\s*[|\u2022\u2013\u2014,\/]\s*/)) {
+      const words = chunk.trim().split(/\s+/).filter(Boolean);
+      while (words.length && isCareerWord(words[0])) words.shift();               /* "Chef Marc Teleki"        */
+      while (words.length && isCareerWord(words[words.length - 1])) words.pop();  /* "Amelia Ford Culinary Professional" */
+      if (words.length < 2 || words.length > 4) continue;
+      if (!words.every(nameShaped)) continue;
+      if (words.some(isCareerWord)) continue;   /* career word stuck in the middle → not a name */
+      const clean = words.map(w => /[a-z]/.test(w) ? w : titleCase(w));
+      const overlap = clean.filter(w => emailTokens.includes(w.toLowerCase())).length;
+      candidates.push({ first: clean[0], last: clean.slice(1).join(' '), score: overlap * 10 - idx });
+    }
+  }
+  if (candidates.length) {
+    candidates.sort((a, b) => b.score - a.score);
+    return { first: candidates[0].first, last: candidates[0].last };
+  }
+
+  if (email) {
+    const p = email.split('@')[0].split(/[._-]+/).filter(x => /^[a-z]{2,}$/i.test(x));
+    if (p.length >= 2) return { first: titleCase(p[0]), last: titleCase(p.slice(1).join(' ')) };
+  }
+  return null;
+}
+
+/* PHONE — AU landline + mobile, any spacing/brackets, +61 normalised */
+function extractPhone(t){
+  const cands = t.match(/(?:\+?61|\(0[2-8]\)|0)[\d\s().-]{7,14}\d/g) || [];
+  for (const c of cands) {
+    let d = c.replace(/\D/g,'');
+    if (d.startsWith('61')) d = '0' + d.slice(2);
+    if (/^0[2-8]\d{8}$/.test(d)) {
+      return d.startsWith('04')
+        ? d.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3')
+        : d.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2 $3');
+    }
+  }
+  return null;
+}
+
+/* LOCATION — map any mentioned suburb to a ChefLink region */
+function extractLocation(t){
+  const low = t.toLowerCase();
+  for (const [region, suburbs] of Object.entries(LOCATION_MAP)) {
+    if (suburbs.some(s => low.includes(s))) return region;
+  }
+  return /\bsydney\b/i.test(t) ? 'Greater Sydney' : null;
+}
+
+/* YEARS — explicit "X years' experience" phrase, otherwise computed
+   from the span of employment date ranges (2016–present etc.) */
+function extractYears(t, expText){
+  const m = t.match(/(?:over|more\s+than)?\s*(\d{1,2})\s*\+?\s*(?:years?|yrs?)\b[^.\n]{0,40}?(?:experience|hospitality|industry|kitchens?|cooking|culinary)/i);
+  if (m) return +m[1];
+  const now = new Date().getFullYear();
+  let min = Infinity, max = 0;
+  for (const r of (expText || t).matchAll(/\b(20\d{2}|19[89]\d)\s*(?:[–—-]|to)\s*(20\d{2}|19[89]\d|present|current|now|today)\b/gi)) {
+    const a = +r[1], b = /^\d/.test(r[2]) ? +r[2] : now;
+    if (a >= 1980 && a <= now && b >= a) { min = Math.min(min, a); max = Math.max(max, b); }
+  }
+  return (max > min) ? Math.min(max - min, 45) : null;
+}
+
+/* ROLE — most recent title: earliest match inside the experience section */
+function extractRole(expText, fullText){
+  for (const src of [expText, fullText]) {
+    if (!src) continue;
+    const low = src.toLowerCase();
+    const found = ROLE_RANK.filter(r => new RegExp('\\b' + r + '\\b', 'i').test(src));
+    if (found.length) {
+      found.sort((a, b) => low.indexOf(a) - low.indexOf(b));
+      return titleCase(found[0]);
+    }
+  }
+  return null;
+}
+
+/* RATE — "$85/hr", "$85–$120 per hour", "$450/day" */
+function extractRate(t){
+  const m = t.match(/\$\s?\d{2,4}(?:\s?[–—-]\s?\$?\d{2,4})?\s*(?:\/|per\s*)\s*(?:hr|hour|day)\b/i);
+  return m ? m[0].replace(/\s+/g,' ').trim() : null;
+}
+
+/* AVAILABILITY — explicit "Availability: …" line, else keyword scan */
+function extractAvailability(t){
+  const m = t.match(/availab(?:le|ility)\s*[:\-]?\s*([^\n.]{3,80})/i);
+  if (m && !/^\s*(to|for)\b/i.test(m[1])) return m[1].trim().replace(/\s+/g,' ');
+  const bits = [];
+  if (/immediate(?:\s+start)?|available\s+now/i.test(t)) bits.push('Immediate');
+  if (/weekends?/i.test(t))  bits.push('Weekends');
+  if (/evenings?|nights?\b/i.test(t)) bits.push('Evenings');
+  if (/weekdays?/i.test(t))  bits.push('Weekdays');
+  return bits.length ? bits.join(' / ') : null;
+}
+
+/* WORK TYPES — matched against the chip options */
+function extractWorkTypes(t){
+  const map = [
+    ['Full-Time', /full[\s-]?time/i],
+    ['Part-Time', /part[\s-]?time/i],
+    ['Casual',    /\bcasual\b/i],
+    ['Contract',  /\bcontract(?:or|\b)/i],
+    ['Events',    /\b(events?|functions?)\b/i],
+  ];
+  return map.filter(([, rx]) => rx.test(t)).map(([v]) => v);
+}
+
+/* LINKS — LinkedIn preferred, else first real URL; Instagram handled
+   separately with emails stripped first so "@gmail" can't leak in */
+function extractLink(t){
+  const li = t.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w%-]+/i);
+  if (li) return li[0].startsWith('http') ? li[0] : 'https://' + li[0];
+  const url = t.match(/https?:\/\/[^\s)>,]+/i);
+  return url ? url[0].replace(/[.,;]$/,'') : null;
+}
+function extractInstagram(t){
+  const ctx = t.match(/instagram\s*[:\-]?\s*@?([a-z0-9._]{3,30})/i);
+  if (ctx) return '@' + ctx[1].replace(/\.$/,'');
+  const noEmails = t.replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, ' ');
+  const m = noEmails.match(/(^|[\s(])@([a-z0-9._]{3,30})\b/i);
+  return m ? '@' + m[2].replace(/\.$/,'') : null;
+}
+
+/* PREVIOUS RESTAURANTS — "at Venue" phrases plus venue-keyword lines
+   in the experience section, with role titles and cities filtered out */
+function extractRestaurants(expText, fullText){
+  const src = expText || fullText;
+  const found = new Set();
+  const JUNK = /^(head|sous|executive|pastry|commis|demi|apprentice|senior|junior|chef|cook|kitchen|line|the|and|at|references?|referees?|seeking|certificate|cert\b|diploma|advanced|over|menu|experienced?|passionate|available|skills?|education|responsible|worked|managed|led|food|professional)\b/i;
+  const CITY = /^(greater\s+)?(sydney|melbourne|brisbane|perth|adelaide|canberra|australia|nsw|vic|qld)\b/i;
+  /* every suburb in LOCATION_MAP is also treated as "not a restaurant" */
+  const SUBURBS = new Set(Object.values(LOCATION_MAP).flat());
+  const addIfValid = (v) => {
+    v = v.replace(/[,.;]+$/,'').trim();
+    if (v.length > 2 && v.length < 45 && !JUNK.test(v) && !CITY.test(v)
+        && !SUBURBS.has(v.toLowerCase())) found.add(v);
+  };
+  /* "at Venue Name" phrases */
+  for (const m of src.matchAll(/(?:\bat|@)\s+((?:[A-ZÀ-Þ][\w'&é.-]*|of|the|&|and)(?:\s+(?:[A-ZÀ-Þ][\w'&é.-]*|of|the|&|and)){0,4})/g)) addIfValid(m[1]);
+  /* employment lines — a chunk only counts if the line carries a year
+     (a dated job entry) or the chunk itself is venue-named
+     ("Bennelong Restaurant", "Black Star Pastry") */
+  for (const line of src.split('\n')) {
+    const hasYear = /\b(19|20)\d{2}\b/.test(line);
+    const clean = line.replace(/\(?\b(19|20)\d{2}\b.*/,'').trim();
+    for (const chunk of clean.split(/\s*[,|\u2022\u2013\u2014]\s*/)) {
+      if (!/^[A-ZÀ-Þ][\w'&é.-]*(?:\s+(?:of|the|&|and|[A-ZÀ-Þ][\w'&é.-]*)){0,5}$/.test(chunk)) continue;
+      if (hasYear || VENUE_WORDS.test(chunk)) addIfValid(chunk);
+    }
+  }
+  return [...found].slice(0, 8);
+}
+
+/* SKILLS / CERTS / CUISINES — keyword + pattern scans */
+const fixAcro = (s) => s.replace(/\b(iii|ii|iv|tafe|nsw|rsa|haccp)\b/gi, m => m.toUpperCase());
+function extractSkills(t){
+  const low = t.toLowerCase();
+  return [...new Set(SKILL_WORDS.filter(s => low.includes(s)).map(s => fixAcro(titleCase(s))))];
+}
+function extractCerts(t){
+  let certs = [];
+  CERT_PATTERNS.forEach(rx => { const m = t.match(rx); if (m) certs.push(...m); });
+  certs = certs.map(c => c.trim().replace(/\s+/g,' ').replace(/[,.;]+$/,''))
+               .map(c => c.length <= 5 ? c.toUpperCase() : fixAcro(titleCase(c)));
+  certs = [...new Set(certs)];
+  /* drop certs that are substrings of a longer one (e.g. "TAFE NSW"
+     when "Certificate IV In Kitchen Management, TAFE NSW" is present) */
+  certs = certs.filter((c, i) => !certs.some((o, j) =>
+    j !== i && o.length > c.length && o.toLowerCase().includes(c.toLowerCase())));
+  return certs.slice(0, 6);
+}
+function extractCuisines(t){
+  return CUISINE_WORDS
+    .filter(c => new RegExp('\\b' + c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '\\b','i').test(t))
+    .map(c => c === 'Cafe' ? 'Café' : c);
+}
+
+/* ---------- showcase copy ---------- */
+
+/* A sentence about passion / philosophy, if the chef wrote one */
+function philosophySentence(t){
+  return sentencesOf(t).find(s =>
+    /\b(passion(ate)?|philosophy|believe|love\s+(of|for)|dedicated\s+to|committed\s+to|driven\s+by)\b/i.test(s)
+    && s.trim().length > 30 && s.trim().length < 260
+  ) || null;
+}
+
+/* SHORT BIO — showcase copy, not a resume dump.
+   1. Prefer the chef's own Profile/Summary section (their voice),
+      trimmed to the first few sentences.
+   2. Otherwise compose from the extracted facts: role + years +
+      notable venues + cuisines + a philosophy line if one exists. */
+function buildBio(sec, facts, fullText){
+  const profileText = (sec.profile || []).join(' ').replace(/\s+/g,' ').trim();
+  if (profileText.length > 40) {
+    let bio = sentencesOf(profileText).slice(0, 4).join(' ').trim();
+    if (bio.length > 600) bio = bio.slice(0, 597).replace(/\s+\S*$/,'') + '…';
+    return bio;
+  }
+  const bits = [];
+  if (facts.role) {
+    let lead = facts.role + (facts.years ? ` with ${facts.years} years' experience` : '');
+    if (facts.restaurants.length) lead += `, including time at ${facts.restaurants.slice(0,3).join(', ')}`;
+    bits.push(lead + '.');
+  } else if (facts.years || facts.restaurants.length) {
+    bits.push(`Chef${facts.years ? ` with ${facts.years} years' experience` : ''}${facts.restaurants.length ? `, including time at ${facts.restaurants.slice(0,3).join(', ')}` : ''}.`);
+  }
+  if (facts.cuisines.length) bits.push(`Specialises in ${facts.cuisines.slice(0,3).join(', ')} cuisine.`);
+  const phil = philosophySentence(fullText);
+  if (phil) bits.push(phil.trim());
+  return bits.join(' ');
+}
+
+/* ONE-LINE SUMMARY — first strong sentence of the profile, or a
+   composed "Role · X+ years · Cuisines" directory line */
+function buildSummary(sec, facts){
+  const profileText = (sec.profile || []).join(' ');
+  const first = sentencesOf(profileText)[0];
+  if (first && first.trim().length > 25 && first.trim().length <= 150) return first.trim();
+  const parts = [
+    facts.role,
+    facts.years ? `${facts.years}+ years` : null,
+    facts.cuisines.slice(0, 2).join(' & ') || null,
+  ].filter(Boolean);
+  return parts.length >= 2 ? parts.join(' · ') : '';
+}
+
+/* ---------- run everything & fill the form ---------- */
+$('#btnExtract').addEventListener('click', () => {
+  const text = $('#resumePaste').value.trim();
+  if (!text) { toast('Paste or upload a resume first'); return; }
+
+  const lines   = text.split(/\n/).map(l => l.trim()).filter(Boolean);
+  const sec     = splitSections(lines);
+  const expText = (sec.experience || []).join('\n');
+
+  const email = (text.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i) || [null])[0];
+  const facts = {
+    name:         extractName(lines, email),
+    email,
+    phone:        extractPhone(text),
+    location:     extractLocation(text),
+    role:         extractRole(expText, text),
+    years:        extractYears(text, expText),
+    rate:         extractRate(text),
+    link:         extractLink(text),
+    instagram:    extractInstagram(text),
+    availability: extractAvailability(text),
+    workTypes:    extractWorkTypes(text),
+    cuisines:     extractCuisines(text),
+    skills:       extractSkills(text),
+    certs:        extractCerts(text),
+    restaurants:  extractRestaurants(expText, text),
+  };
+  facts.bio     = buildBio(sec, facts, text);
+  facts.summary = buildSummary(sec, facts);
+
+  /* fill the form — only fields the resume actually provided */
+  const set = (id, v) => { if (v) $(id).value = v; };
+  if (facts.name) { set('#firstName', facts.name.first); set('#surname', facts.name.last); }
+  set('#email', facts.email);
+  set('#phone', facts.phone);
+  if (facts.location) {
+    const sel = $('#location');
+    const opt = [...sel.options].find(o => o.text === facts.location);
+    if (opt) sel.value = opt.value; else { sel.add(new Option(facts.location, facts.location)); sel.value = facts.location; }
+  }
+  set('#role', facts.role);
+  set('#years', facts.years);
+  set('#rate', facts.rate);
+  set('#link', facts.link);
+  set('#instagram', facts.instagram);
+  set('#availability', facts.availability);
+  set('#summary', facts.summary);
+  set('#bio', facts.bio);
+  set('#skills', facts.skills.join(', '));
+  set('#certs', facts.certs.join(', '));
+  set('#restaurants', facts.restaurants.join(', '));
+  if (facts.workTypes.length) setChips('#workChips', facts.workTypes);
+  if (facts.cuisines.length)  setChips('#cuisineChips', facts.cuisines);
+
+  /* report — exactly what was found and what wasn't */
+  const checklist = [
+    ['Name', !!facts.name], ['Email', !!facts.email], ['Phone', !!facts.phone],
+    ['Location', !!facts.location], ['Role', !!facts.role], ['Years', facts.years != null],
+    ['Rate', !!facts.rate], ['Link', !!facts.link], ['Instagram', !!facts.instagram],
+    ['Availability', !!facts.availability], ['Work types', !!facts.workTypes.length],
+    ['Cuisines', !!facts.cuisines.length], ['Skills', !!facts.skills.length],
+    ['Certs', !!facts.certs.length], ['Restaurants', !!facts.restaurants.length],
+    ['Summary', !!facts.summary], ['Bio', !!facts.bio],
+  ];
+  const got     = checklist.filter(([,ok]) => ok).map(([n]) => n);
+  const missing = checklist.filter(([,ok]) => !ok).map(([n]) => n);
+  parseStatus.className = 'parse-status ok';
+  parseStatus.textContent = '✓ Extracted: ' + got.join(', ')
+    + (missing.length ? '  ·  Not found in resume: ' + missing.join(', ') : '');
+
+  toast('Form pre-filled — review the details');
+  $('#sec-info').scrollIntoView({ behavior:'smooth' });
+});
+
+$('#btnClearResume').addEventListener('click', () => {
+  $('#resumePaste').value='';
+  parseStatus.textContent=''; parseStatus.className='parse-status';
+});
+
+/* ================================================================
+   buildChefJSON — the single source of truth for the export shape.
+   Edit keys here to match your Supabase columns / importer.
+   ================================================================ */
+function slugId(first, last){
+  const base = (first + '-' + last).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'chef';
+  return base + '-' + Date.now().toString(36);
+}
+
+function buildChefJSON(){
+  const first = $('#firstName').value.trim();
+  const last  = $('#surname').value.trim();
+  const embed = $('#embedImages').checked;
+
+  /* image entry: filename always; base64 dataUrl only when embedding */
+  const img = (key) => {
+    const item = imageStore[key];
+    if (!item) return null;
+    return embed ? { filename:item.name, data:item.dataUrl } : { filename:item.name };
+  };
+
+  const splitList = (id) => $(id).value.split(',').map(s => s.trim()).filter(Boolean);
+
+  return {
+    id: slugId(first, last),
+    created_at: new Date().toISOString(),
+    source: 'chef-portfolio-builder',
+
+    /* identity */
+    first_name: first,
+    surname: last,
+    name: (first + ' ' + last).trim(),
+    title: $('#role').value.trim(),
+    email: $('#email').value.trim(),
+    phone: $('#phone').value.trim(),
+    location: $('#location').value,
+    website: $('#link').value.trim(),
+    instagram: $('#instagram').value.trim(),
+
+    /* profile copy */
+    summary: $('#summary').value.trim(),
+    bio: $('#bio').value.trim(),
+
+    /* experience */
+    years_experience: Number($('#years').value) || 0,
+    rate: $('#rate').value.trim(),
+    specialties: chipValues('#cuisineChips'),
+    skills: splitList('#skills'),
+    certifications: splitList('#certs'),
+    previous_restaurants: splitList('#restaurants'),
+    work_types: chipValues('#workChips'),
+    availability: $('#availability').value.trim(),
+
+    /* directory flags */
+    flags: {
+      graduate:  $('#flagGraduate').checked,
+      gold:      $('#flagGold').checked,
+      featured:  $('#flagFeatured').checked,
+      spotlight: $('#flagSpotlight').checked,
+    },
+
+    /* photos */
+    photos: {
+      profile: img('profile'),
+      hero:    img('dish1'),
+      gallery: ['dish1','dish2','dish3','dish4'].map(img).filter(Boolean),
+    },
+  };
+}
+
+/* ================================================================
+   GENERATE / COPY / DOWNLOAD / RESET
+   ================================================================ */
+let lastJSON = '';
+
+$('#btnGenerate').addEventListener('click', () => {
+  const data = buildChefJSON();
+  if (!data.first_name || !data.surname) { toast('First name and surname are required'); $('#firstName').focus(); return; }
+  if (!data.email) { toast('Email is required'); $('#email').focus(); return; }
+
+  lastJSON = JSON.stringify(data, null, 2);
+
+  /* Show output (truncate base64 blobs on screen so it stays readable —
+     the full data is kept for copy / download) */
+  const display = lastJSON.replace(/"data": "data:image\/[^"]{80}[^"]*"/g,
+    (m) => m.slice(0, 110) + '… [base64 truncated for display]"');
+  const out = $('#jsonOut');
+  out.textContent = display;
+  out.style.display = 'block';
+
+  $('#btnCopy').disabled = false;
+  $('#btnDownload').disabled = false;
+  toast('JSON generated ✓');
+});
+
+$('#btnCopy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(lastJSON); toast('Copied to clipboard'); }
+  catch { /* iPad Safari fallback */
+    const ta = document.createElement('textarea');
+    ta.value = lastJSON; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+    toast('Copied to clipboard');
+  }
+});
+
+$('#btnDownload').addEventListener('click', () => {
+  const data = JSON.parse(lastJSON);
+  const fname = (data.name || 'chef').toLowerCase().replace(/[^a-z0-9]+/g,'-') + '-cheflink.json';
+  const blob = new Blob([lastJSON], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast('Downloading ' + fname);
+});
+
+$('#btnReset').addEventListener('click', () => {
+  if (!confirm('Reset the whole form? All entered data and photos will be cleared.')) return;
+  $$('input[type=text],input[type=email],input[type=tel],input[type=url],input[type=number],textarea').forEach(i => i.value='');
+  $$('input[type=checkbox]').forEach(c => c.checked = c.id === 'embedImages');
+  $$('.chip.on').forEach(c => c.classList.remove('on'));
+  $('#location').selectedIndex = 0;
+  Object.keys(imageStore).forEach(k => delete imageStore[k]);
+  $$('.dropzone[data-key]').forEach(dz => {
+    dz.classList.remove('has-img');
+    dz.querySelector('img').style.display='none';
+    dz.querySelector('.dz-icon').style.display='';
+    dz.querySelector('.dz-text').style.display='';
+    dz.parentElement.querySelector('.dz-name').textContent='';
+  });
+  $('#jsonOut').style.display='none';
+  $('#btnCopy').disabled = true; $('#btnDownload').disabled = true;
+  lastJSON = ''; parseStatus.textContent='';
+  window.scrollTo({ top:0, behavior:'smooth' });
+  toast('Form reset');
+});
+
+/* ================================================================
+   PORTFOLIO PREVIEW — styled like the ChefLink Sydney profile page
+   ================================================================ */
+$('#btnPreview').addEventListener('click', () => {
+  const d = buildChefJSON();
+  const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const hero = imageStore.dish1?.dataUrl || imageStore.profile?.dataUrl || '';
+
+  const badges = [];
+  if (d.flags.graduate)  badges.push('🎓 New Graduate');
+  if (d.flags.gold)      badges.push('Gold');
+  if (d.flags.featured)  badges.push('Featured');
+  if (d.flags.spotlight) badges.push('Spotlight');
+
+  const galleryHtml = ['profile','dish1','dish2','dish3','dish4']
+    .filter(k => imageStore[k])
+    .map(k => {
+      const label = IMAGE_SLOTS.find(s => s.key === k).label;
+      return `<figure><img src="${imageStore[k].dataUrl}" alt=""><figcaption>${esc(label)}</figcaption></figure>`;
+    }).join('');
+
+  const chips = (arr) => arr.length
+    ? `<div class="pv-chipline">${arr.map(v => `<span>${esc(v)}</span>`).join('')}</div>`
+    : `<p class="pv-empty">Not provided yet</p>`;
+
+  $('#previewContent').innerHTML = `
+    <div class="pv-hero">
+      ${hero ? `<img src="${hero}" alt="">` : ''}
+      <div class="pv-hero-shade"></div>
+      <div class="pv-hero-txt">
+        <p class="eyebrow">Chef Profile</p>
+        <div class="pv-name">${esc(d.name) || 'Chef Name'}</div>
+        <div class="pv-title">${esc(d.title) || 'Professional title'}</div>
+        ${badges.length ? `<div class="pv-badges">${badges.map(b => `<span class="pv-badge">${b}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>
+    <div class="pv-body">
+      <div class="pv-meta">
+        <div><small>Location</small><b>${esc(d.location)}</b></div>
+        <div><small>Experience</small><b>${d.years_experience ? d.years_experience + ' years' : '—'}</b></div>
+        <div><small>Rate</small><b>${esc(d.rate) || '—'}</b></div>
+        <div><small>Availability</small><b>${esc(d.availability) || '—'}</b></div>
+      </div>
+
+      ${d.summary ? `<p class="pv-bio" style="font-size:18px;font-style:italic">“${esc(d.summary)}”</p>` : ''}
+
+      <h3 class="pv-sec">About</h3>
+      ${d.bio ? `<p class="pv-bio">${esc(d.bio)}</p>` : `<p class="pv-empty">Bio not written yet</p>`}
+
+      <h3 class="pv-sec">Cuisine Specialties</h3>
+      ${chips(d.specialties)}
+
+      <h3 class="pv-sec">Skills</h3>
+      ${chips(d.skills)}
+
+      <h3 class="pv-sec">Qualifications</h3>
+      ${chips(d.certifications)}
+
+      ${d.previous_restaurants.length ? `<h3 class="pv-sec">Previous Restaurants</h3>${chips(d.previous_restaurants)}` : ''}
+
+      <h3 class="pv-sec">Gallery</h3>
+      ${galleryHtml ? `<div class="pv-gallery">${galleryHtml}</div>` : `<p class="pv-empty">No photos uploaded yet</p>`}
+    </div>`;
+
+  $('#previewModal').classList.add('open');
+  document.body.style.overflow='hidden';
+});
+
+const closeModal = () => { $('#previewModal').classList.remove('open'); document.body.style.overflow=''; };
+$('#btnCloseModal').addEventListener('click', closeModal);
+$('#previewModal').addEventListener('click', (e) => { if (e.target.id === 'previewModal') closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+</script>
+</body>
+</html>
