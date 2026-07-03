@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ChefLink Sydney — Operator CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════
+   ChefLink Sydney — Operator CRM
+   Gold on charcoal, matching cheflinksydney.com brand.
+   Single file. No build step. iPad-first touch targets.
+   ══════════════════════════════════════════════════════════════ */
+:root{
+  --gold:#C9A84C; --gold-deep:#A8862F; --gold-soft:rgba(201,168,76,.14);
+  --green:#6FA872; --amber:#D89B4A; --red:#C96A5A; --blue:#7B95B5;
+  --radius:16px; --radius-sm:10px;
+  --shadow:0 8px 28px rgba(0,0,0,.22);
+  --font-display:"Fraunces", Georgia, serif;
+  --font-body:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#161513; --bg-2:#1C1B18; --surface:#201F1B; --card:#26241F;
+  --line:#35322A; --line-soft:#2C2A24;
+  --text:#F2EEE4; --muted:#A69D89; --faint:#78715F;
+  --chip:#2C2A23; --input:#1B1A16;
+  --pass-bg:rgba(111,168,114,.13); --fail-bg:rgba(201,106,90,.12);
+}
+[data-theme="light"]{
+  --bg:#F6F3EB; --bg-2:#EFEBDF; --surface:#FFFFFF; --card:#FFFFFF;
+  --line:#E2DCCC; --line-soft:#ECE7D9;
+  --text:#242219; --muted:#6E6753; --faint:#9C947E;
+  --chip:#F0ECDF; --input:#FAF8F2;
+  --pass-bg:rgba(111,168,114,.14); --fail-bg:rgba(201,106,90,.12);
+  --shadow:0 8px 24px rgba(60,50,20,.10);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--font-body); font-size:16px; line-height:1.5;
+  min-height:100dvh; -webkit-font-smoothing:antialiased;
+  transition:background .25s ease, color .25s ease;
+}
+h1,h2,h3{font-family:var(--font-display); font-weight:600; margin:0;}
+button{font-family:var(--font-body); cursor:pointer;}
+input,textarea,select{font-family:var(--font-body); font-size:16px; color:var(--text);}
+a{color:var(--gold);}
+::placeholder{color:var(--faint);}
+:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+@media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important;} }
+
+/* ── Login ─────────────────────────────────────────── */
+.login-wrap{min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:24px;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(201,168,76,.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(201,168,76,.06), transparent 60%),
+    var(--bg);}
+.login-card{width:100%; max-width:420px; background:var(--card); border:1px solid var(--line);
+  border-radius:22px; padding:36px 32px; box-shadow:var(--shadow);}
+.brand-mark{display:flex; align-items:baseline; gap:10px; margin-bottom:6px;}
+.brand-mark .word{font-family:var(--font-display); font-size:30px; font-weight:700; letter-spacing:.3px;}
+.brand-mark .word em{font-style:normal; color:var(--gold);}
+.login-sub{color:var(--muted); font-size:14.5px; margin:0 0 26px;}
+.field{margin-bottom:16px;}
+.field label{display:block; font-size:13px; letter-spacing:.4px; text-transform:uppercase; color:var(--muted); margin-bottom:7px;}
+.field input, .field textarea, .field select{
+  width:100%; padding:14px 15px; border-radius:12px; border:1px solid var(--line);
+  background:var(--input); font-size:16px;}
+.field textarea{min-height:120px; resize:vertical; line-height:1.55;}
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  min-height:48px; padding:0 20px; border-radius:12px; border:1px solid transparent;
+  font-size:15.5px; font-weight:600; transition:transform .06s ease, background .2s ease;}
+.btn:active{transform:scale(.98);}
+.btn-gold{background:var(--gold); color:#1C1C1C; border-color:var(--gold);}
+.btn-gold:active{background:var(--gold-deep);}
+.btn-ghost{background:transparent; color:var(--text); border-color:var(--line);}
+.btn-soft{background:var(--gold-soft); color:var(--gold); border-color:transparent;}
+.btn-danger{background:transparent; color:var(--red); border-color:var(--line);}
+.btn-block{width:100%;}
+.btn-sm{min-height:40px; padding:0 14px; font-size:14px; border-radius:10px;}
+.login-note{margin-top:18px; padding:14px; border-radius:12px; background:var(--gold-soft);
+  color:var(--muted); font-size:13.5px; line-height:1.5;}
+.login-note b{color:var(--gold);}
+.err-msg{margin-top:14px; color:var(--red); font-size:14px; min-height:20px;}
+
+/* ── App shell ─────────────────────────────────────── */
+#app{display:none; min-height:100dvh;}
+.topbar{position:sticky; top:0; z-index:40; display:flex; align-items:center; gap:14px;
+  padding:14px 20px calc(14px); padding-top:calc(14px + env(safe-area-inset-top));
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line-soft);}
+.topbar .word{font-family:var(--font-display); font-size:21px; font-weight:700;}
+.topbar .word em{font-style:normal; color:var(--gold);}
+.topbar .spacer{flex:1;}
+.icon-btn{width:46px; height:46px; border-radius:12px; border:1px solid var(--line);
+  background:var(--surface); color:var(--text); font-size:19px; display:flex; align-items:center; justify-content:center;}
+.demo-pill{font-size:12px; font-weight:700; letter-spacing:.6px; color:#1C1C1C;
+  background:var(--gold); border-radius:999px; padding:4px 10px;}
+
+.tabs{display:flex; gap:8px; padding:12px 20px 4px; overflow-x:auto; -webkit-overflow-scrolling:touch;}
+.tab{flex:0 0 auto; min-height:46px; padding:0 18px; border-radius:999px;
+  border:1px solid var(--line); background:var(--surface); color:var(--muted);
+  font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px;}
+.tab.active{background:var(--gold); border-color:var(--gold); color:#1C1C1C;}
+main{padding:18px 20px calc(40px + env(safe-area-inset-bottom)); max-width:1180px; margin:0 auto;}
+
+.screen-title{font-size:26px; margin:10px 0 4px;}
+.screen-sub{color:var(--muted); font-size:14.5px; margin:0 0 20px;}
+
+/* ── Cards & grids ────────────────────────────────── */
+.grid{display:grid; gap:14px;}
+.grid.stats{grid-template-columns:repeat(auto-fit, minmax(150px,1fr));}
+.grid.two{grid-template-columns:1fr; }
+@media(min-width:860px){ .grid.two{grid-template-columns:1.15fr .85fr;} }
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px 18px;}
+.card h3{font-size:17px; margin-bottom:12px; display:flex; align-items:center; gap:8px;}
+.stat{padding:16px;}
+.stat .num{font-family:var(--font-display); font-size:34px; font-weight:700; line-height:1.05;}
+.stat .lbl{color:var(--muted); font-size:13px; margin-top:5px;}
+.stat .delta{font-size:12.5px; color:var(--green); margin-top:3px;}
+.stat.gold .num{color:var(--gold);}
+
+/* distribution bar */
+.dist-bar{display:flex; height:16px; border-radius:999px; overflow:hidden; border:1px solid var(--line-soft);}
+.dist-bar div{height:100%;}
+.legend{display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:13.5px; color:var(--muted);}
+.legend .dot{width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px;}
+
+/* sparkline */
+.spark{width:100%; height:74px; margin-top:4px;}
+.spark rect{fill:var(--gold); opacity:.85;}
+.spark text{fill:var(--faint); font-size:9px; font-family:var(--font-body);}
+
+/* attention & activity lists */
+.row-list{display:flex; flex-direction:column;}
+.row-item{display:flex; align-items:center; gap:13px; padding:13px 6px; border-bottom:1px solid var(--line-soft);
+  min-height:60px; border-radius:8px;}
+.row-item:last-child{border-bottom:none;}
+.row-item.tappable{cursor:pointer;}
+.row-item.tappable:active{background:var(--gold-soft);}
+.avatar{width:44px; height:44px; border-radius:12px; flex:0 0 44px; overflow:hidden;
+  background:linear-gradient(135deg, var(--gold-deep), var(--gold)); color:#1C1C1C;
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;}
+.avatar img{width:100%; height:100%; object-fit:cover;}
+.row-main{flex:1; min-width:0;}
+.row-main .nm{font-weight:600; font-size:15.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.row-main .sub{color:var(--muted); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.row-end{text-align:right; font-size:13px; color:var(--muted); flex:0 0 auto;}
+.empty{padding:28px 14px; text-align:center; color:var(--muted); font-size:14.5px; line-height:1.6;}
+.empty .big{font-size:30px; display:block; margin-bottom:8px;}
+
+/* score ring */
+.ring{position:relative; width:46px; height:46px; flex:0 0 46px;}
+.ring svg{transform:rotate(-90deg);}
+.ring .val{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:12.5px; font-weight:700;}
+.ring.big{width:92px; height:92px; flex-basis:92px;}
+.ring.big .val{font-size:22px; font-family:var(--font-display);}
+
+/* ── Directory ────────────────────────────────────── */
+.toolbar{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px;}
+.search{flex:1 1 240px; display:flex; align-items:center; gap:8px; background:var(--input);
+  border:1px solid var(--line); border-radius:12px; padding:0 14px; min-height:48px;}
+.search input{flex:1; border:none; background:transparent; outline:none; min-width:0;}
+.chips{display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:6px; margin-bottom:8px;}
+.chip{flex:0 0 auto; min-height:42px; padding:0 15px; border-radius:999px; border:1px solid var(--line);
+  background:var(--chip); color:var(--muted); font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px;}
+.chip.active{background:var(--gold); border-color:var(--gold); color:#1C1C1C;}
+.table-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--line); border-radius:var(--radius); background:var(--card);}
+table{border-collapse:collapse; width:100%; min-width:820px; font-size:14.5px;}
+thead th{position:sticky; top:0; text-align:left; font-size:12px; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--muted); background:var(--surface); padding:13px 14px; border-bottom:1px solid var(--line);
+  white-space:nowrap; cursor:pointer; user-select:none;}
+thead th .arr{color:var(--gold); font-size:11px;}
+tbody td{padding:13px 14px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+tbody tr{cursor:pointer;}
+tbody tr:active{background:var(--gold-soft);}
+tbody tr:last-child td{border-bottom:none;}
+.cdot{width:11px; height:11px; border-radius:50%; display:inline-block; margin-right:7px; vertical-align:-1px;}
+.badge{display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; border-radius:999px;
+  padding:3px 9px; margin:1px 3px 1px 0; white-space:nowrap;}
+.b-gold{background:var(--gold-soft); color:var(--gold);}
+.b-green{background:var(--pass-bg); color:var(--green);}
+.b-grey{background:var(--chip); color:var(--muted);}
+.b-red{background:var(--fail-bg); color:var(--red);}
+.gapflag{display:inline-block; font-size:11.5px; color:var(--red); background:var(--fail-bg);
+  border-radius:6px; padding:2px 7px; margin:2px 3px 0 0; white-space:nowrap;}
+.count-note{color:var(--muted); font-size:13.5px; margin:10px 2px;}
+
+/* ── Review ──────────────────────────────────────── */
+.review-head{display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom:16px;}
+.review-head .avatar{width:76px; height:76px; flex-basis:76px; border-radius:18px; font-size:26px;}
+.review-head h2{font-size:24px;}
+.review-head .title-line{color:var(--muted); font-size:14.5px;}
+.pillrow{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;}
+.meta-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:6px 0 2px;}
+.meta{background:var(--surface); border:1px solid var(--line-soft); border-radius:12px; padding:10px 12px;}
+.meta .k{font-size:11.5px; text-transform:uppercase; letter-spacing:.5px; color:var(--faint);}
+.meta .v{font-size:14.5px; font-weight:600; margin-top:3px; word-break:break-word;}
+.meta .v.miss{color:var(--red); font-weight:600;}
+.gallery{display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding:4px 0;}
+.gallery .ph{flex:0 0 96px; height:96px; border-radius:12px; overflow:hidden; background:var(--chip);
+  display:flex; align-items:center; justify-content:center; color:var(--faint); font-size:11px; text-align:center;}
+.gallery .ph img{width:100%; height:100%; object-fit:cover;}
+.bio-block{font-size:14.5px; color:var(--text); line-height:1.65; white-space:pre-wrap;}
+.bio-block.dim{color:var(--muted); font-style:italic;}
+.check{display:flex; align-items:flex-start; gap:12px; padding:11px 4px; border-bottom:1px solid var(--line-soft);}
+.check:last-child{border-bottom:none;}
+.check .ico{width:26px; height:26px; border-radius:50%; flex:0 0 26px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; margin-top:1px;}
+.check.pass .ico{background:var(--pass-bg); color:var(--green);}
+.check.fail .ico{background:var(--fail-bg); color:var(--red);}
+.check .t{font-size:14.5px; font-weight:600;}
+.check .d{font-size:13px; color:var(--muted);}
+.gaplist{margin:10px 0 0; padding:0; list-style:none;}
+.gaplist li{display:flex; gap:9px; padding:7px 0; font-size:14.5px; color:var(--text);}
+.gaplist li::before{content:"→"; color:var(--gold); font-weight:700;}
+.actions-row{display:flex; flex-wrap:wrap; gap:10px; margin-top:16px;}
+.savehint{font-size:13px; color:var(--green); min-height:18px; margin-top:8px;}
+.ai-out{margin-top:14px; padding:14px 16px; border-radius:12px; background:var(--gold-soft);
+  border:1px solid color-mix(in srgb, var(--gold) 35%, transparent); font-size:14.5px; line-height:1.6; white-space:pre-wrap;}
+
+/* ── Communication ───────────────────────────────── */
+.tmpl-chips{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 16px;}
+.warn-box{margin:0 0 14px; padding:12px 14px; border-radius:12px; background:var(--fail-bg); color:var(--red); font-size:14px; display:flex; gap:8px; align-items:flex-start;}
+.log-item{padding:12px 4px; border-bottom:1px solid var(--line-soft);}
+.log-item:last-child{border-bottom:none;}
+.log-item .l1{display:flex; justify-content:space-between; gap:10px; font-size:14.5px; font-weight:600;}
+.log-item .l1 .when{color:var(--faint); font-weight:500; font-size:12.5px; white-space:nowrap;}
+.log-item .l2{color:var(--muted); font-size:13px; margin-top:2px;}
+.back-link{display:inline-flex; align-items:center; gap:6px; color:var(--gold); background:none; border:none;
+  font-size:15px; font-weight:600; padding:10px 2px; margin-bottom:4px;}
+
+/* toast */
+#toast{position:fixed; left:50%; bottom:calc(28px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px);
+  background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:14px;
+  padding:13px 20px; font-size:14.5px; box-shadow:var(--shadow); opacity:0; pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease; z-index:99; max-width:88vw; text-align:center;}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+#toast.bad{border-color:var(--red);}
+
+.skel{background:linear-gradient(90deg, var(--chip) 25%, var(--line-soft) 50%, var(--chip) 75%);
+  background-size:200% 100%; animation:sh 1.3s infinite; border-radius:12px;}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.section-gap{margin-top:16px;}
+.mini-note{font-size:12.5px; color:var(--faint); margin-top:10px;}
+</style>
+</head>
+<body data-theme="dark">
+
+<!-- ── LOGIN ─────────────────────────────────────── -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="brand-mark"><span class="word">Chef<em>Link</em></span><span style="color:var(--muted);font-size:13px;">Sydney · Operator</span></div>
+    <p class="login-sub">Sign in to the CRM &amp; monitoring dashboard.</p>
+    <div class="field"><label for="li-email">Email</label><input id="li-email" type="email" autocomplete="username" placeholder="you@cheflinksydney.com"></div>
+    <div class="field"><label for="li-pw">Password</label><input id="li-pw" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn btn-gold btn-block" id="li-btn" onclick="doLogin()">Sign in</button>
+    <div class="err-msg" id="li-err"></div>
+    <div class="login-note" id="li-demo" style="display:none;">
+      <b>Demo mode is on.</b> Explore every screen with realistic sample chefs — nothing touches the live backend.<br>
+      <button class="btn btn-soft btn-block" style="margin-top:10px;" onclick="enterDemo()">Explore with sample data</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── APP ───────────────────────────────────────── -->
+<div id="app">
+  <div class="topbar">
+    <span class="word">Chef<em>Link</em>&nbsp;<span style="font-family:var(--font-body);font-size:12px;color:var(--muted);font-weight:600;letter-spacing:1px;">CRM</span></span>
+    <span class="demo-pill" id="demo-pill" style="display:none;">DEMO</span>
+    <span class="spacer"></span>
+    <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle light or dark theme">☀️</button>
+    <button class="icon-btn" onclick="doLogout()" aria-label="Sign out">⎋</button>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab" data-view="dashboard" onclick="go('dashboard')">📊 Dashboard</button>
+    <button class="tab" data-view="directory" onclick="go('directory')">👨‍🍳 Chefs</button>
+    <button class="tab" data-view="comms" onclick="go('comms')">💬 Messages</button>
+  </nav>
+  <main id="main"></main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   CONFIG — everything you might need to change lives here.
+   ══════════════════════════════════════════════════════════════ */
+const CONFIG = {
+  SUPABASE_URL: "https://tehxobdokbvqtwtgqzrh.supabase.co",
+  SUPABASE_ANON_KEY: "PASTE_ANON_KEY",          // ← paste your anon key
+  CHEFS_TABLE: "Chefs",            // capital C. lowercase "chefs" is unused/legacy.
+  STORAGE_BUCKET: "chef-images",
+
+  // Optional CRM-side tables. If they don't exist yet, the app quietly
+  // falls back to on-device storage and tells you once in the footer note.
+  NOTES_TABLE: "crm_notes",            // { id, chef_id, body, updated_at }
+  COMMS_TABLE: "crm_comms",            // { id, chef_id, chef_name, template, subject, channel, created_at }
+  NOTIFICATIONS_TABLE: "notifications",// { id, chef_id, title, body, type, created_at }
+
+  COL: {
+    id:"id", created:"created_at", name:"name", email:"email", title:"title",
+    phone:"phone", location:"location", rate:"rate", experience:"experience",
+    availability:"availability", instagram:"instagram",
+    summary:"summary", bio:"bio", qualifications:"qualifications",
+    graduate:"graduate", featured:"featured",
+    plan:"plan", paid:"paid", paid_at:"paid_at", approved:"approved",
+    // JSON-encoded STRING columns — always parsed defensively:
+    restaurants:"restaurants", cuisine:"cuisine", work_type:"work_type",
+    gallery_urls:"gallery_urls", dishes:"dishes",
+    photo_url:"photo_url", hero_url:"hero_url"
+  },
+  PLACEHOLDER_PATTERNS: ["EMPTY","04xx xxx xxx","0400 000 000","Surname"],
+
+  // Health-check tuning
+  BIO_MIN_WORDS: 30,     // bio must be at least this many words
+  MIN_PHOTOS: 3,         // minimum photos for a healthy portfolio
+  DORMANT_DAYS: 30,      // no update in this many days = dormant
+
+  DEMO_MODE: true,       // seed realistic mock chefs so every screen renders with no backend
+  AI_ENDPOINT: ""        // paste n8n webhook URL; empty = rule-based coaching only
+};
+const C = CONFIG.COL;
+
+/* ── State ─────────────────────────────────────────── */
+const S = {
+  session:null, demo:false,
+  chefs:[], comms:[], notes:{},
+  commsRemote:true, notesRemote:true,
+  view:"dashboard", chefId:null,
+  q:"", filter:"all", sortKey:"score", sortDir:1,
+  draft:{chefId:null, template:null, subject:"", body:""},
+  aiBusy:false
+};
+
+/* ── Safe storage (works even where localStorage is blocked) ── */
+const mem = {};
+const store = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k]??null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){ delete mem[k]; } }
+};
+
+/* ── Tiny helpers ─────────────────────────────────── */
+const $  = s=>document.querySelector(s);
+const esc = s=> String(s??"").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function toast(msg, bad){ const t=$("#toast"); t.textContent=msg; t.className=bad?"show bad":"show";
+  clearTimeout(t._h); t._h=setTimeout(()=>t.className="",3200); }
+function fmtDate(d){ if(!d) return "—"; const dt=new Date(d); if(isNaN(dt)) return "—";
+  return dt.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}); }
+function daysAgo(d){ if(!d) return Infinity; const dt=new Date(d); if(isNaN(dt)) return Infinity;
+  return Math.floor((Date.now()-dt.getTime())/86400000); }
+function ago(d){ const n=daysAgo(d); if(n===Infinity) return "—";
+  if(n<=0) return "today"; if(n===1) return "yesterday"; if(n<7) return n+" days ago";
+  if(n<30) return Math.floor(n/7)+"w ago"; if(n<365) return Math.floor(n/30)+"mo ago"; return Math.floor(n/365)+"y ago"; }
+function initials(n){ return String(n||"?").trim().split(/\s+/).slice(0,2).map(w=>w[0]||"").join("").toUpperCase()||"?"; }
+function isPlaceholder(v){
+  if(v===null||v===undefined) return true;
+  const s=String(v).trim(); if(!s) return true;
+  return CONFIG.PLACEHOLDER_PATTERNS.some(p=> s.toLowerCase()===p.toLowerCase() || s.toLowerCase().includes(p.toLowerCase()));
+}
+function parseArr(v){ // JSON-encoded string columns → array, never throws
+  if(Array.isArray(v)) return v;
+  if(v===null||v===undefined||v==="") return [];
+  try{ const p=JSON.parse(v); return Array.isArray(p)?p:[]; }catch(e){ return []; }
+}
+function dishPhoto(d){ if(!d||typeof d!=="object") return null;
+  return d.photo||d.photo_url||d.image||d.img||d.url||null; }
+function photoCount(ch){
+  let n=0;
+  if(!isPlaceholder(ch[C.photo_url])) n++;
+  if(!isPlaceholder(ch[C.hero_url])) n++;
+  n += parseArr(ch[C.gallery_urls]).filter(u=>!isPlaceholder(u)).length;
+  n += parseArr(ch[C.dishes]).filter(d=>dishPhoto(d)).length;
+  return n;
+}
+function allPhotos(ch){
+  const out=[];
+  if(!isPlaceholder(ch[C.photo_url])) out.push(ch[C.photo_url]);
+  if(!isPlaceholder(ch[C.hero_url])) out.push(ch[C.hero_url]);
+  parseArr(ch[C.gallery_urls]).forEach(u=>{ if(!isPlaceholder(u)) out.push(u); });
+  parseArr(ch[C.dishes]).forEach(d=>{ const p=dishPhoto(d); if(p) out.push(p); });
+  return out.slice(0,12);
+}
+function lastActive(ch){ return ch.updated_at || ch[C.paid_at] || ch[C.created] || null; }
+function isDormant(ch){ return daysAgo(lastActive(ch)) >= CONFIG.DORMANT_DAYS; }
+function planLabel(ch){
+  if(ch[C.paid]===true) return {t:"Paid", cls:"b-gold"};
+  const p=String(ch[C.plan]||"").toLowerCase();
+  if(p==="premium") return {t:"Premium", cls:"b-gold"};
+  if(p==="basic") return {t:"Basic", cls:"b-grey"};
+  return {t:"Free", cls:"b-grey"};
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PORTFOLIO HEALTH — the heart of the coaching layer
+   ══════════════════════════════════════════════════════════════ */
+function health(ch){
+  const bioWords = String(ch[C.bio]||"").trim().split(/\s+/).filter(Boolean).length;
+  const photos = photoCount(ch);
+  const exp = parseFloat(ch[C.experience]); const expOk = !isNaN(exp) && exp>0;
+  const items = [
+    {k:"phone", t:"Real phone number", pass:!isPlaceholder(ch[C.phone]),
+      gap:"Real phone missing — currently a placeholder"},
+    {k:"rate", t:"Rate set", pass:!isPlaceholder(ch[C.rate]),
+      gap:"Add a rate — currently blank"},
+    {k:"location", t:"Location set", pass:!isPlaceholder(ch[C.location]),
+      gap:"Add a suburb or area — location is blank"},
+    {k:"summary", t:"Summary present", pass:!isPlaceholder(ch[C.summary]),
+      gap:"Write a one-line summary for the directory card"},
+    {k:"bio", t:"Bio ≥ "+CONFIG.BIO_MIN_WORDS+" words", pass:!isPlaceholder(ch[C.bio]) && bioWords>=CONFIG.BIO_MIN_WORDS,
+      gap: isPlaceholder(ch[C.bio]) ? "Add a bio — it's empty" : ("Grow the bio — only "+bioWords+" words so far")},
+    {k:"experience", t:"Experience recorded", pass:expOk,
+      gap:"Add years of experience"},
+    {k:"availability", t:"Availability set", pass:!isPlaceholder(ch[C.availability]),
+      gap:"Set availability so venues know when to book"},
+    {k:"photos", t:"At least "+CONFIG.MIN_PHOTOS+" photos", pass:photos>=CONFIG.MIN_PHOTOS,
+      gap: photos===0 ? ("Add "+CONFIG.MIN_PHOTOS+" dish photos — none yet") : ("Add "+(CONFIG.MIN_PHOTOS-photos)+" more dish photo"+(CONFIG.MIN_PHOTOS-photos>1?"s":"")+" ("+photos+" of "+CONFIG.MIN_PHOTOS+")")},
+    {k:"approved", t:"Approved for directory", pass:ch[C.approved]===true,
+      gap:"Not yet approved — hidden from directory"}
+  ];
+  const passed = items.filter(i=>i.pass).length;
+  const score = Math.round(passed/items.length*100);
+  return { items, score, photos, bioWords,
+    gaps: items.filter(i=>!i.pass).map(i=>i.gap),
+    bucket: score>=80 ? "complete" : (score>=40 ? "needswork" : "barely") };
+}
+function scoreColor(s){ return s>=80 ? "var(--green)" : (s>=40 ? "var(--amber)" : "var(--red)"); }
+function ringSVG(score, big){
+  const r = big?40:19, w = big?7:4, sz = big?92:46, c = 2*Math.PI*r;
+  const off = c*(1-score/100);
+  return '<div class="ring'+(big?' big':'')+'"><svg width="'+sz+'" height="'+sz+'" viewBox="0 0 '+sz+' '+sz+'">'+
+    '<circle cx="'+(sz/2)+'" cy="'+(sz/2)+'" r="'+r+'" fill="none" stroke="var(--line)" stroke-width="'+w+'"/>'+
+    '<circle cx="'+(sz/2)+'" cy="'+(sz/2)+'" r="'+r+'" fill="none" stroke="'+scoreColor(score)+'" stroke-width="'+w+'" stroke-linecap="round" stroke-dasharray="'+c+'" stroke-dashoffset="'+off+'"/>'+
+    '</svg><span class="val" style="color:'+scoreColor(score)+'">'+score+'</span></div>';
+}
+function gapFlags(ch){
+  const f=[];
+  if(isPlaceholder(ch[C.rate])) f.push("no rate");
+  if(isPlaceholder(ch[C.phone])) f.push("placeholder phone");
+  if(isPlaceholder(ch[C.location])) f.push("no location");
+  if(isPlaceholder(ch[C.bio])) f.push("no bio");
+  if(photoCount(ch)===0) f.push("no photos");
+  return f;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SUPABASE REST — plain fetch(), matching the public site exactly
+   ══════════════════════════════════════════════════════════════ */
+function sbHeaders(){
+  const bearer = (S.session && S.session.access_token) ? S.session.access_token : CONFIG.SUPABASE_ANON_KEY;
+  return { "Content-Type":"application/json", "apikey":CONFIG.SUPABASE_ANON_KEY,
+           "Authorization":"Bearer "+bearer, "Prefer":"return=representation" };
+}
+async function sb(method, table, query, body){
+  const url = CONFIG.SUPABASE_URL + "/rest/v1/" + table + (query ? "?"+query : "");
+  const res = await fetch(url, { method, headers: sbHeaders(), body: body?JSON.stringify(body):undefined });
+  if(!res.ok){ const txt = await res.text().catch(()=> ""); const e=new Error(txt||("HTTP "+res.status)); e.status=res.status; throw e; }
+  if(res.status===204) return [];
+  return res.json().catch(()=>[]);
+}
+
+/* ── Auth (Supabase email/password) ───────────────── */
+async function doLogin(){
+  const email=$("#li-email").value.trim(), pw=$("#li-pw").value;
+  const err=$("#li-err"); err.textContent="";
+  if(!email||!pw){ err.textContent="Enter your email and password."; return; }
+  const btn=$("#li-btn"); btn.disabled=true; btn.textContent="Signing in…";
+  try{
+    const res = await fetch(CONFIG.SUPABASE_URL+"/auth/v1/token?grant_type=password",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "apikey":CONFIG.SUPABASE_ANON_KEY },
+      body: JSON.stringify({ email, password: pw })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || !data.access_token){
+      err.textContent = data.error_description || data.msg || "Sign-in didn't work — check the email and password.";
+      return;
+    }
+    S.session = data; S.demo=false;
+    store.set("clcrm_session", JSON.stringify(data));
+    startApp();
+  }catch(e){
+    err.textContent="Couldn't reach the server. Check your connection and try again.";
+  }finally{ btn.disabled=false; btn.textContent="Sign in"; }
+}
+function enterDemo(){ S.demo=true; S.session=null; startApp(); }
+function doLogout(){
+  S.session=null; store.del("clcrm_session");
+  $("#app").style.display="none"; $("#login").style.display="flex";
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DEMO DATA — realistic mock chefs so every screen renders
+   ══════════════════════════════════════════════════════════════ */
+function demoChefs(){
+  const day = 86400000, now = Date.now();
+  const g = (arr)=>JSON.stringify(arr);
+  const mk=(o)=>Object.assign({
+    id:"", created_at:new Date(now - (o._age??10)*day).toISOString(),
+    updated_at:new Date(now - (o._upd??o._age??10)*day).toISOString(),
+    name:"", email:"", title:"Chef", phone:"04xx xxx xxx", location:"EMPTY", rate:"EMPTY",
+    experience:0, availability:"", instagram:"", summary:"", bio:"", qualifications:"",
+    graduate:false, featured:false, plan:"free", paid:false, paid_at:null, approved:false,
+    restaurants:g([]), cuisine:g([]), work_type:g([]), gallery_urls:g([]), dishes:g([]),
+    photo_url:"", hero_url:""
+  }, o);
+  const finish = list=>{ list.forEach((c,i)=>{ c.id="demo-"+(i+1); }); return list; };
+  const longBio = "Classically trained in French technique with a decade across Sydney's hatted kitchens, I cook produce-first menus that let NSW growers shine. I lead calm, organised sections, mentor apprentices with patience, and love the theatre of open-kitchen service. Comfortable running events from intimate chef's tables to 300-cover functions.";
+  return finish([
+    mk({name:"Aiko Tanaka", email:"aiko@demo.chef", title:"Head Chef", phone:"0412 338 291", location:"Surry Hills",
+      rate:"$65/hr", experience:12, availability:"Weeknights + weekends", summary:"Produce-first head chef, ex-Quay.",
+      bio:longBio, qualifications:"Cert IV Kitchen Management", graduate:false, featured:true, plan:"premium", paid:true,
+      paid_at:new Date(now-40*day).toISOString(), approved:true,
+      cuisine:g(["Modern Australian","Japanese"]), work_type:g(["Events","Relief"]),
+      photo_url:"https://picsum.photos/seed/aiko/300/300", hero_url:"https://picsum.photos/seed/aikodish/600/400",
+      gallery_urls:g(["https://picsum.photos/seed/a1/400/300","https://picsum.photos/seed/a2/400/300","https://picsum.photos/seed/a3/400/300"]),
+      dishes:g([{name:"Charred kingfish, yuzu beurre blanc", photo:"https://picsum.photos/seed/a4/400/300"}]),
+      _age:210, _upd:3}),
+    mk({name:"Marcus Webb", email:"marcus@demo.chef", title:"Sous Chef", phone:"0433 901 552", location:"Newtown",
+      rate:"$52/hr", experience:7, availability:"Full-time", summary:"Steady hands on a busy pass.",
+      bio:"Seven years across pubs and bistros, strong on grill and larder. Reliable, fast, tidy sections and a good teacher for juniors.",
+      graduate:false, featured:false, plan:"basic", paid:true, paid_at:new Date(now-12*day).toISOString(), approved:true,
+      cuisine:g(["Bistro","Pub"]), work_type:g(["Full-time"]),
+      photo_url:"https://picsum.photos/seed/marcus/300/300",
+      gallery_urls:g(["https://picsum.photos/seed/m1/400/300","https://picsum.photos/seed/m2/400/300"]),
+      _age:160, _upd:9}),
+    mk({name:"Priya Raman", email:"priya@demo.chef", title:"Pastry Chef", phone:"0401 227 846", location:"Marrickville",
+      rate:"$58/hr", experience:9, availability:"Weekends", summary:"Viennoiserie and plated desserts.",
+      bio:longBio, graduate:false, featured:true, plan:"premium", paid:true, paid_at:new Date(now-90*day).toISOString(), approved:true,
+      cuisine:g(["Pastry","French"]), work_type:g(["Events"]),
+      photo_url:"https://picsum.photos/seed/priya/300/300", hero_url:"https://picsum.photos/seed/priyadish/600/400",
+      gallery_urls:g(["https://picsum.photos/seed/p1/400/300","https://picsum.photos/seed/p2/400/300","https://picsum.photos/seed/p3/400/300","https://picsum.photos/seed/p4/400/300"]),
+      _age:300, _upd:55}),
+    mk({name:"Liam O'Connor", email:"liam@demo.chef", title:"Graduate Chef", phone:"0455 810 934", location:"Parramatta",
+      rate:"$34/hr", experience:1, availability:"Casual, any shift", summary:"Fresh Cert III graduate, eager and quick.",
+      bio:"Just finished my Commercial Cookery Cert III with distinction. Placement at a two-hat kitchen taught me speed and respect for the pass. Looking for a brigade that will push me.",
+      qualifications:"Cert III Commercial Cookery", graduate:true, featured:false, plan:"free", paid:false, approved:true,
+      cuisine:g(["Modern Australian"]), work_type:g(["Casual"]),
+      photo_url:"https://picsum.photos/seed/liam/300/300",
+      gallery_urls:g(["https://picsum.photos/seed/l1/400/300"]),
+      _age:18, _upd:2}),
+    mk({name:"Sofia Marino", email:"sofia@demo.chef", title:"Chef de Partie", location:"Bondi",
+      rate:"$45/hr", experience:4, availability:"Evenings", summary:"Pasta fresca specialist.",
+      bio:"Four years on the pasta section at Italian fine diners.",
+      graduate:false, plan:"basic", paid:false, approved:true,
+      cuisine:g(["Italian"]), work_type:g(["Part-time"]),
+      photo_url:"https://picsum.photos/seed/sofia/300/300",
+      _age:75, _upd:41}),
+    mk({name:"Daniel Nguyen", email:"daniel@demo.chef", title:"Graduate Chef",
+      experience:0, summary:"", graduate:true, plan:"free", approved:false,
+      _age:6, _upd:6}),
+    mk({name:"Grace Surname", email:"grace@demo.chef", title:"Commis Chef",
+      experience:1, graduate:true, plan:"free", approved:false,
+      _age:3, _upd:3}),
+    mk({name:"Tom Fletcher", email:"tom@demo.chef", title:"Executive Chef", phone:"0420 664 118", location:"CBD",
+      rate:"$80/hr", experience:18, availability:"Consulting only", summary:"Menu development and kitchen turnarounds.",
+      bio:longBio, qualifications:"Adv. Diploma Hospitality", featured:true, plan:"premium", paid:true,
+      paid_at:new Date(now-200*day).toISOString(), approved:true,
+      cuisine:g(["Modern Australian","European"]), work_type:g(["Consulting"]),
+      photo_url:"https://picsum.photos/seed/tom/300/300", hero_url:"https://picsum.photos/seed/tomdish/600/400",
+      gallery_urls:g(["https://picsum.photos/seed/t1/400/300","https://picsum.photos/seed/t2/400/300"]),
+      dishes:g([{name:"Dry-aged duck, davidson plum", photo:"https://picsum.photos/seed/t3/400/300"},{name:"Pipis XO"}]),
+      _age:400, _upd:70}),
+    mk({name:"Hana Kim", email:"hana@demo.chef", title:"Chef", phone:"0409 118 273", location:"Chatswood",
+      rate:"EMPTY", experience:6, availability:"Weekdays", summary:"Korean-Australian fusion.",
+      bio:"Six years across Korean BBQ and modern fusion venues. Fermentation nerd — house kimchi, jangs and vinegars.",
+      plan:"basic", paid:false, approved:true, cuisine:g(["Korean","Fusion"]), work_type:g(["Full-time"]),
+      photo_url:"https://picsum.photos/seed/hana/300/300",
+      gallery_urls:g(["https://picsum.photos/seed/h1/400/300","https://picsum.photos/seed/h2/400/300"]),
+      _age:50, _upd:33}),
+    mk({name:"Jack Ellis", email:"jack@demo.chef", title:"Breakfast Chef", phone:"0400 000 000", location:"Manly",
+      rate:"$40/hr", experience:3, availability:"Mornings", summary:"Brunch service specialist.",
+      bio:"", plan:"free", paid:false, approved:true, cuisine:g(["Cafe"]),
+      _age:95, _upd:95}),
+    mk({name:"Isabella Rossi", email:"isabella@demo.chef", title:"Graduate Chef", phone:"0431 552 780", location:"Leichhardt",
+      rate:"$36/hr", experience:1, availability:"Casual", summary:"Pastry-leaning graduate, latte art champ.",
+      bio:"Graduated top of my class and spent a year part-time in an artisan bakery while studying. Precision is my thing — lamination, macarons, sugar work.",
+      qualifications:"Cert III Patisserie", graduate:true, plan:"basic", paid:true, paid_at:new Date(now-5*day).toISOString(), approved:true,
+      cuisine:g(["Pastry"]), work_type:g(["Casual"]),
+      photo_url:"https://picsum.photos/seed/bella/300/300",
+      gallery_urls:g(["https://picsum.photos/seed/b1/400/300","https://picsum.photos/seed/b2/400/300","https://picsum.photos/seed/b3/400/300"]),
+      _age:30, _upd:1}),
+    mk({name:"Omar Haddad", email:"omar@demo.chef", title:"Grill Chef", phone:"0447 209 663", location:"EMPTY",
+      rate:"$48/hr", experience:8, availability:"", summary:"Charcoal and open-fire cooking.",
+      bio:"Eight years over charcoal — Lebanese grills, Argentine parrilla, whole-beast events.",
+      plan:"free", paid:false, approved:true, cuisine:g(["Middle Eastern","BBQ"]),
+      photo_url:"https://picsum.photos/seed/omar/300/300",
+      _age:120, _upd:64}),
+    mk({name:"Chloe Bennett", email:"chloe@demo.chef", title:"Private Chef", phone:"0418 375 902", location:"Mosman",
+      rate:"$75/hr", experience:10, availability:"By arrangement", summary:"Private dining and yacht charters.",
+      bio:longBio, featured:false, plan:"premium", paid:true, paid_at:new Date(now-2*day).toISOString(), approved:false,
+      cuisine:g(["Degustation"]), work_type:g(["Private"]),
+      photo_url:"https://picsum.photos/seed/chloe/300/300", hero_url:"https://picsum.photos/seed/chloedish/600/400",
+      gallery_urls:g(["https://picsum.photos/seed/c1/400/300","https://picsum.photos/seed/c2/400/300","https://picsum.photos/seed/c3/400/300"]),
+      _age:9, _upd:2}),
+    mk({name:"Raj Patel", email:"raj@demo.chef", title:"Curry Chef", phone:"0402 991 435", location:"Harris Park",
+      rate:"$44/hr", experience:11, availability:"Full-time", summary:"Regional Indian, tandoor certified.",
+      bio:"Eleven years of regional Indian cooking, from Gujarati thalis to Chettinad heat. Tandoor specialist.",
+      plan:"basic", paid:false, approved:true, cuisine:g(["Indian"]), work_type:g(["Full-time"]),
+      _age:230, _upd:140})
+  ]);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DATA LOADING — progressive, never blocks the UI
+   ══════════════════════════════════════════════════════════════ */
+async function loadChefs(){
+  if(S.demo){ S.chefs = demoChefs(); return; }
+  try{
+    S.chefs = await sb("GET", CONFIG.CHEFS_TABLE, "select=*&order="+C.created+".desc");
+  }catch(e){
+    S.chefs = [];
+    toast("Couldn't load chefs from Supabase — check the anon key in CONFIG.", true);
+  }
+}
+async function loadComms(){
+  const local = ()=>{ try{ S.comms = JSON.parse(store.get("clcrm_comms")||"[]"); }catch(e){ S.comms=[]; } S.commsRemote=false; };
+  if(S.demo){ local(); return; }
+  try{ S.comms = await sb("GET", CONFIG.COMMS_TABLE, "select=*&order=created_at.desc&limit=400"); S.commsRemote=true; }
+  catch(e){ local(); }
+}
+async function loadNotes(){
+  const local = ()=>{ try{ S.notes = JSON.parse(store.get("clcrm_notes")||"{}"); }catch(e){ S.notes={}; } S.notesRemote=false; };
+  if(S.demo){ local(); return; }
+  try{
+    const rows = await sb("GET", CONFIG.NOTES_TABLE, "select=*");
+    S.notes = {}; rows.forEach(r=>{ S.notes[r.chef_id]=r.body||""; }); S.notesRemote=true;
+  }catch(e){ local(); }
+}
+async function saveNote(chefId, body){
+  S.notes[chefId]=body;
+  if(S.demo || !S.notesRemote){ store.set("clcrm_notes", JSON.stringify(S.notes)); return "local"; }
+  try{
+    const upd = await sb("PATCH", CONFIG.NOTES_TABLE, "chef_id=eq."+encodeURIComponent(chefId), {body, updated_at:new Date().toISOString()});
+    if(!upd || upd.length===0) await sb("POST", CONFIG.NOTES_TABLE, "", {chef_id:chefId, body, updated_at:new Date().toISOString()});
+    return "remote";
+  }catch(e){ S.notesRemote=false; store.set("clcrm_notes", JSON.stringify(S.notes)); return "local"; }
+}
+async function logComm(entry){
+  entry.created_at = new Date().toISOString();
+  entry.id = entry.id || ("c"+Date.now());
+  S.comms.unshift(entry);
+  if(S.demo || !S.commsRemote){ store.set("clcrm_comms", JSON.stringify(S.comms.slice(0,400))); return; }
+  try{ await sb("POST", CONFIG.COMMS_TABLE, "", {chef_id:entry.chef_id, chef_name:entry.chef_name, template:entry.template, subject:entry.subject, channel:entry.channel}); }
+  catch(e){ S.commsRemote=false; store.set("clcrm_comms", JSON.stringify(S.comms.slice(0,400))); }
+}
+function lastContact(chefId){
+  const hit = S.comms.find(c=>String(c.chef_id)===String(chefId));
+  return hit ? hit.created_at : null;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NAVIGATION & SHELL
+   ══════════════════════════════════════════════════════════════ */
+function go(view, chefId){
+  S.view=view; if(chefId!==undefined) S.chefId=chefId;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.view===view || (view==="review"&&t.dataset.view==="directory")));
+  render(); window.scrollTo({top:0});
+}
+function render(){
+  const m=$("#main");
+  if(S.view==="dashboard") m.innerHTML=viewDashboard();
+  else if(S.view==="directory") m.innerHTML=viewDirectory();
+  else if(S.view==="review") m.innerHTML=viewReview();
+  else if(S.view==="comms") m.innerHTML=viewComms();
+  afterRender();
+}
+function afterRender(){
+  const q=$("#dir-q"); if(q){ q.value=S.q; q.oninput=e=>{ S.q=e.target.value; renderDirRows(); }; }
+  if(S.view==="directory") renderDirRows();
+}
+function toggleTheme(){
+  const cur=document.body.dataset.theme, next=cur==="dark"?"light":"dark";
+  document.body.dataset.theme=next; store.set("clcrm_theme", next);
+  $("#theme-btn").textContent = next==="dark" ? "☀️" : "🌙";
+}
+function startApp(){
+  $("#login").style.display="none"; $("#app").style.display="block";
+  $("#demo-pill").style.display = S.demo ? "inline-block" : "none";
+  $("#main").innerHTML =
+    '<div class="grid stats">'+[1,2,3,4].map(()=>'<div class="skel" style="height:92px;"></div>').join("")+'</div>'+
+    '<div class="skel section-gap" style="height:220px;"></div>';
+  Promise.all([loadChefs(), loadComms(), loadNotes()]).then(()=>{ go("dashboard"); });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN 1 — DASHBOARD
+   ══════════════════════════════════════════════════════════════ */
+function viewDashboard(){
+  const chefs=S.chefs;
+  if(!chefs.length) return '<h1 class="screen-title">Good day, chef-wrangler 👋</h1>'+
+    '<div class="card empty"><span class="big">🍳</span>No chefs loaded yet. In live mode, paste your anon key into CONFIG at the top of this file — or flip <b>DEMO_MODE</b> on to explore.</div>';
+  const newWeek = chefs.filter(c=>daysAgo(c[C.created])<7).length;
+  const dormant = chefs.filter(isDormant);
+  const active = chefs.length - dormant.length;
+  const grads = chefs.filter(c=>c[C.graduate]===true).length;
+  const feat = chefs.filter(c=>c[C.featured]===true).length;
+  const paid = chefs.filter(c=>c[C.paid]===true).length;
+  const premium = chefs.filter(c=>String(c[C.plan]||"").toLowerCase()==="premium").length;
+  const unapproved = chefs.filter(c=>c[C.approved]!==true).length;
+
+  const hs = chefs.map(c=>({c, h:health(c)}));
+  const buckets = {complete:0, needswork:0, barely:0};
+  hs.forEach(x=>buckets[x.h.bucket]++);
+  const pct = k=>Math.round(buckets[k]/chefs.length*100);
+
+  // needs attention: lowest score, then longest silence
+  const attention = hs.slice().sort((a,b)=> (a.h.score-b.h.score) || (daysAgo(lastActive(b.c))-daysAgo(lastActive(a.c))) ).slice(0,5);
+  const recent = chefs.slice().sort((a,b)=> new Date(b[C.created])-new Date(a[C.created])).slice(0,6);
+
+  // signups per week, last 8 weeks
+  const weeks = Array(8).fill(0);
+  chefs.forEach(c=>{ const w=Math.floor(daysAgo(c[C.created])/7); if(w>=0&&w<8) weeks[7-w]++; });
+  const maxW = Math.max(1,...weeks);
+  const spark = '<svg class="spark" viewBox="0 0 240 74" preserveAspectRatio="none">'+
+    weeks.map((v,i)=>{ const h=Math.max(2, v/maxW*52); return '<rect x="'+(i*30+5)+'" y="'+(58-h)+'" width="20" height="'+h+'" rx="4"/>'+
+      '<text x="'+(i*30+15)+'" y="70" text-anchor="middle">'+(i===7?"now":(7-i)+"w")+'</text>'; }).join("")+'</svg>';
+
+  return ''+
+  '<h1 class="screen-title">Good day 👋</h1>'+
+  '<p class="screen-sub">Here\u2019s how the ChefLink roster is looking.</p>'+
+  '<div class="grid stats">'+
+    stat(chefs.length,"Total chefs", newWeek?("+"+newWeek+" this week"):"", true)+
+    stat(active,"Active", dormant.length+" dormant (30d+)")+
+    stat(grads,"🎓 Graduates")+
+    stat(feat,"⭐ Featured")+
+    stat(paid,"Paid", premium+" on Premium", true)+
+    stat(unapproved,"Awaiting approval")+
+  '</div>'+
+  '<div class="grid two section-gap">'+
+    '<div>'+
+      '<div class="card"><h3>Portfolio health across the roster</h3>'+
+        '<div class="dist-bar">'+
+          '<div style="width:'+pct("complete")+'%;background:var(--green)"></div>'+
+          '<div style="width:'+pct("needswork")+'%;background:var(--amber)"></div>'+
+          '<div style="width:'+pct("barely")+'%;background:var(--red)"></div>'+
+        '</div>'+
+        '<div class="legend">'+
+          '<span><span class="dot" style="background:var(--green)"></span>Complete · '+buckets.complete+'</span>'+
+          '<span><span class="dot" style="background:var(--amber)"></span>Needs work · '+buckets.needswork+'</span>'+
+          '<span><span class="dot" style="background:var(--red)"></span>Barely started · '+buckets.barely+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="card section-gap"><h3>🚩 Needs your attention</h3><div class="row-list">'+
+        attention.map(x=>{
+          const lc=lastContact(x.c[C.id]);
+          return rowItem(x.c, x.h, esc((x.h.gaps[0]||"Looking good")) , ago(lastActive(x.c))+(lc?" · contacted "+ago(lc):" · never contacted"));
+        }).join("")+
+      '</div><p class="mini-note">Sorted by lowest completeness, then longest silence. Tap a chef to review and reach out.</p></div>'+
+    '</div>'+
+    '<div>'+
+      '<div class="card"><h3>New chefs per week</h3>'+spark+'</div>'+
+      '<div class="card section-gap"><h3>Recent activity</h3><div class="row-list">'+
+        (recent.length? recent.map(c=>{
+          const h=health(c);
+          return rowItem(c,h, esc(c[C.title]||"Chef")+" · joined "+fmtDate(c[C.created]), ago(c[C.created]));
+        }).join("") : '<div class="empty">Quiet for now — new sign-ups will appear here.</div>')+
+      '</div></div>'+
+    '</div>'+
+  '</div>'+
+  storageFootnote();
+}
+function stat(num,lbl,delta,gold){
+  return '<div class="card stat'+(gold?' gold':'')+'"><div class="num">'+num+'</div><div class="lbl">'+lbl+'</div>'+(delta?'<div class="delta">'+delta+'</div>':'')+'</div>';
+}
+function rowItem(c,h,sub,end){
+  const ph = !isPlaceholder(c[C.photo_url]) ? '<img src="'+esc(c[C.photo_url])+'" alt="" onerror="this.remove()">' : "";
+  return '<div class="row-item tappable" onclick="openReview(\''+esc(c[C.id])+'\')">'+
+    '<div class="avatar">'+ph+(ph?"":esc(initials(c[C.name])))+'</div>'+
+    '<div class="row-main"><div class="nm">'+esc(c[C.name]||"Unnamed chef")+(c[C.graduate]===true?" 🎓":"")+(c[C.featured]===true?" ⭐":"")+'</div>'+
+    '<div class="sub">'+sub+'</div></div>'+
+    ringSVG(h.score)+
+    '<div class="row-end">'+end+'</div></div>';
+}
+function storageFootnote(){
+  if(S.demo) return '<p class="mini-note">Demo mode — sample data only, nothing is written to Supabase.</p>';
+  const bits=[];
+  if(!S.notesRemote) bits.push("notes");
+  if(!S.commsRemote) bits.push("the communication log");
+  if(!bits.length) return "";
+  return '<p class="mini-note">Heads-up: the "'+CONFIG.NOTES_TABLE+'" / "'+CONFIG.COMMS_TABLE+'" tables aren\u2019t reachable yet, so '+bits.join(" and ")+' are being kept on this device for now. Create those tables in Supabase to sync across devices.</p>';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN 2 — CHEF DIRECTORY
+   ══════════════════════════════════════════════════════════════ */
+const FILTERS = [
+  ["all","All"],["incomplete","Incomplete"],["graduates","🎓 Graduates"],["featured","⭐ Featured"],
+  ["paid","Paid"],["unapproved","Unapproved"],["dormant","Dormant"],["nevercontacted","Never contacted"]
+];
+function filteredChefs(){
+  const q=S.q.trim().toLowerCase();
+  let list=S.chefs.map(c=>({c,h:health(c)}));
+  if(q) list=list.filter(x=> String(x.c[C.name]||"").toLowerCase().includes(q) || String(x.c[C.email]||"").toLowerCase().includes(q));
+  const f=S.filter;
+  if(f==="incomplete") list=list.filter(x=>x.h.score<80);
+  else if(f==="graduates") list=list.filter(x=>x.c[C.graduate]===true);
+  else if(f==="featured") list=list.filter(x=>x.c[C.featured]===true);
+  else if(f==="paid") list=list.filter(x=>x.c[C.paid]===true);
+  else if(f==="unapproved") list=list.filter(x=>x.c[C.approved]!==true);
+  else if(f==="dormant") list=list.filter(x=>isDormant(x.c));
+  else if(f==="nevercontacted") list=list.filter(x=>!lastContact(x.c[C.id]));
+  const k=S.sortKey, d=S.sortDir;
+  list.sort((a,b)=>{
+    if(k==="name") return d*String(a.c[C.name]||"").localeCompare(String(b.c[C.name]||""));
+    if(k==="score") return d*(a.h.score-b.h.score);
+    if(k==="active") return d*(new Date(lastActive(a.c)||0)-new Date(lastActive(b.c)||0));
+    if(k==="status") return d*((a.c[C.paid]?2:0)+(a.c[C.approved]?1:0) - ((b.c[C.paid]?2:0)+(b.c[C.approved]?1:0)));
+    return 0;
+  });
+  return list;
+}
+function setFilter(f){ S.filter=f; render(); }
+function setSort(k){ if(S.sortKey===k) S.sortDir*=-1; else {S.sortKey=k; S.sortDir=1;} render(); }
+function viewDirectory(){
+  return ''+
+  '<h1 class="screen-title">Chef directory</h1>'+
+  '<p class="screen-sub">Every chef on the platform, with completeness and gaps at a glance. Tap a row to review.</p>'+
+  '<div class="toolbar"><div class="search">🔍<input id="dir-q" type="search" placeholder="Search name or email…" autocapitalize="off"></div></div>'+
+  '<div class="chips">'+FILTERS.map(f=>'<button class="chip'+(S.filter===f[0]?' active':'')+'" onclick="setFilter(\''+f[0]+'\')">'+f[1]+'</button>').join("")+'</div>'+
+  '<div class="table-wrap"><table><thead><tr>'+
+    th("name","Chef")+th("status","Status")+th("score","Completeness")+th("active","Last active")+'<th>Gaps</th>'+
+  '</tr></thead><tbody id="dir-body"></tbody></table></div>'+
+  '<p class="count-note" id="dir-count"></p>';
+}
+function th(k,label){ const on=S.sortKey===k; return '<th onclick="setSort(\''+k+'\')">'+label+(on?' <span class="arr">'+(S.sortDir>0?"▲":"▼")+'</span>':'')+'</th>'; }
+function renderDirRows(){
+  const body=$("#dir-body"); if(!body) return;
+  const list=filteredChefs();
+  $("#dir-count").textContent = list.length+" of "+S.chefs.length+" chefs";
+  if(!list.length){ body.innerHTML='<tr><td colspan="5"><div class="empty"><span class="big">🕊️</span>No chefs match — try a different filter or search.</div></td></tr>'; return; }
+  body.innerHTML = list.map(x=>{
+    const c=x.c, h=x.h, p=planLabel(c), lc=lastContact(c[C.id]);
+    return '<tr onclick="openReview(\''+esc(c[C.id])+'\')">'+
+      '<td><b>'+esc(c[C.name]||"Unnamed")+'</b>'+(c[C.graduate]===true?" 🎓":"")+(c[C.featured]===true?" ⭐":"")+
+        '<div style="color:var(--muted);font-size:12.5px;">'+esc(c[C.title]||"")+'</div></td>'+
+      '<td><span class="badge '+(c[C.approved]===true?'b-green':'b-red')+'">'+(c[C.approved]===true?'Approved':'Unapproved')+'</span>'+
+        '<span class="badge '+p.cls+'">'+p.t+'</span></td>'+
+      '<td><span class="cdot" style="background:'+scoreColor(h.score)+'"></span><b>'+h.score+'</b><span style="color:var(--faint)">/100</span></td>'+
+      '<td>'+ago(lastActive(c))+'<div style="color:var(--faint);font-size:12px;">'+(lc?("contacted "+ago(lc)):"never contacted")+'</div></td>'+
+      '<td>'+ (gapFlags(c).map(f=>'<span class="gapflag">'+f+'</span>').join("")||'<span class="badge b-green">all good</span>') +'</td>'+
+    '</tr>';
+  }).join("");
+}
+function openReview(id){ go("review", id); }
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN 3 — PORTFOLIO REVIEW
+   ══════════════════════════════════════════════════════════════ */
+function chefById(id){ return S.chefs.find(c=>String(c[C.id])===String(id)); }
+function viewReview(){
+  const c=chefById(S.chefId);
+  if(!c) return '<div class="card empty"><span class="big">🤔</span>That chef isn\u2019t loaded. Head back to the directory.</div>';
+  const h=health(c), p=planLabel(c), photos=allPhotos(c), lc=lastContact(c[C.id]);
+  const meta=(k,v,missTxt)=>'<div class="meta"><div class="k">'+k+'</div><div class="v'+(isPlaceholder(v)?' miss':'')+'">'+(isPlaceholder(v)?(missTxt||"Missing"):esc(v))+'</div></div>';
+  const cuisines=parseArr(c[C.cuisine]).join(", "), wt=parseArr(c[C.work_type]).join(", ");
+  const dishes=parseArr(c[C.dishes]);
+  return ''+
+  '<button class="back-link" onclick="go(\'directory\')">← Back to directory</button>'+
+  '<div class="review-head">'+
+    '<div class="avatar">'+(!isPlaceholder(c[C.photo_url])?'<img src="'+esc(c[C.photo_url])+'" alt="" onerror="this.remove()">':esc(initials(c[C.name])))+'</div>'+
+    '<div style="flex:1;min-width:180px;"><h2>'+esc(c[C.name]||"Unnamed chef")+(c[C.graduate]===true?" 🎓":"")+'</h2>'+
+      '<div class="title-line">'+esc(c[C.title]||"Chef")+(c[C.email]?' · '+esc(c[C.email]):'')+'</div>'+
+      '<div class="pillrow"><span class="badge '+p.cls+'">'+p.t+'</span>'+
+        '<span class="badge '+(c[C.approved]===true?'b-green':'b-red')+'">'+(c[C.approved]===true?'Approved':'Not approved')+'</span>'+
+        (c[C.featured]===true?'<span class="badge b-gold">⭐ Featured</span>':'')+
+        '<span class="badge b-grey">joined '+fmtDate(c[C.created])+'</span>'+
+        '<span class="badge b-grey">'+(lc?("contacted "+ago(lc)):"never contacted")+'</span>'+
+      '</div></div>'+
+    ringSVG(h.score,true)+
+  '</div>'+
+  '<div class="grid two">'+
+    '<div>'+ // left: preview
+      '<div class="card"><h3>Portfolio preview</h3>'+
+        '<div class="meta-grid">'+
+          meta("Phone", isPlaceholder(c[C.phone])?null:c[C.phone], "Placeholder")+
+          meta("Rate", c[C.rate])+meta("Location", c[C.location])+
+          meta("Experience", (parseFloat(c[C.experience])>0? c[C.experience]+" yrs":null))+
+          meta("Availability", c[C.availability])+
+          meta("Qualifications", c[C.qualifications])+
+          meta("Cuisine", cuisines||null)+meta("Work type", wt||null)+
+        '</div>'+
+        '<h3 class="section-gap">Summary</h3><div class="bio-block'+(isPlaceholder(c[C.summary])?' dim':'')+'">'+(isPlaceholder(c[C.summary])?"No summary yet — the directory card will look bare.":esc(c[C.summary]))+'</div>'+
+        '<h3 class="section-gap">Bio</h3><div class="bio-block'+(isPlaceholder(c[C.bio])?' dim':'')+'">'+(isPlaceholder(c[C.bio])?"No bio yet.":esc(c[C.bio]))+'</div>'+
+        '<h3 class="section-gap">Photos · '+h.photos+'</h3>'+
+        (photos.length?'<div class="gallery">'+photos.map(u=>'<div class="ph"><img src="'+esc(u)+'" alt="" loading="lazy" onerror="this.parentNode.textContent=\'photo unavailable\'"></div>').join("")+'</div>'
+          :'<div class="empty">No photos yet — this is the single biggest thing holding the portfolio back. 📸</div>')+
+        (dishes.length?'<h3 class="section-gap">Signature dishes</h3><div class="row-list">'+dishes.map(d=>'<div class="row-item"><div class="row-main"><div class="nm">'+esc((d&&d.name)||"Untitled dish")+'</div><div class="sub">'+(dishPhoto(d)?"has photo":"no photo yet")+'</div></div></div>').join("")+'</div>':'')+
+      '</div>'+
+    '</div>'+
+    '<div>'+ // right: coaching
+      '<div class="card"><h3>Portfolio health · '+h.score+'/100</h3>'+
+        h.items.map(i=>'<div class="check '+(i.pass?'pass':'fail')+'"><div class="ico">'+(i.pass?'✓':'!')+'</div><div><div class="t">'+esc(i.t)+'</div>'+(!i.pass?'<div class="d">'+esc(i.gap)+'</div>':'')+'</div></div>').join("")+
+        (h.gaps.length?'<h3 class="section-gap">What to fix first</h3><ul class="gaplist">'+h.gaps.map(g=>'<li>'+esc(g)+'</li>').join("")+'</ul>'
+          :'<div class="empty" style="padding:16px;">✨ This portfolio is in great shape. Maybe time to feature them?</div>')+
+        '<div class="actions-row">'+
+          '<button class="btn btn-gold" onclick="startDraft(\''+esc(c[C.id])+'\')">💬 Draft message</button>'+
+          '<button class="btn btn-soft" onclick="aiCoach(\''+esc(c[C.id])+'\')" id="ai-btn">✨ Suggest improvements'+(CONFIG.AI_ENDPOINT?" with AI":"")+'</button>'+
+        '</div>'+
+        '<div id="ai-out"></div>'+
+      '</div>'+
+      '<div class="card section-gap"><h3>📝 Internal notes</h3>'+
+        '<div class="field"><textarea id="note-body" placeholder="Only you see this — call history, vibe, follow-ups…">'+esc(S.notes[c[C.id]]||"")+'</textarea></div>'+
+        '<button class="btn btn-ghost btn-sm" onclick="onSaveNote(\''+esc(c[C.id])+'\')">Save note</button>'+
+        '<div class="savehint" id="note-hint"></div>'+
+      '</div>'+
+      '<div class="card section-gap"><h3>Contact history</h3><div class="row-list">'+commLogHTML(c[C.id])+'</div></div>'+
+    '</div>'+
+  '</div>'+storageFootnote();
+}
+async function onSaveNote(id){
+  const where = await saveNote(id, $("#note-body").value);
+  $("#note-hint").textContent = where==="remote" ? "Saved to Supabase ✓" : "Saved on this device ✓";
+}
+function commLogHTML(chefId){
+  const rows = S.comms.filter(x=> chefId? String(x.chef_id)===String(chefId) : true).slice(0,30);
+  if(!rows.length) return '<div class="empty">No outreach yet'+(chefId?' — a friendly first message goes a long way. 🌱':'.')+'</div>';
+  return rows.map(r=>'<div class="log-item"><div class="l1"><span>'+esc(r.template||"Message")+(chefId?'':' → '+esc(r.chef_name||''))+'</span><span class="when">'+fmtDate(r.created_at)+'</span></div><div class="l2">'+esc(r.subject||"")+' · via '+esc(r.channel||"—")+'</div></div>').join("");
+}
+
+/* ── Rule-based + AI coaching ─────────────────────── */
+function ruleCoaching(c,h){
+  const first=String(c[C.name]||"there").split(/\s+/)[0];
+  const lines=["Coaching notes for "+ (c[C.name]||"this chef") + " ("+h.score+"/100):",""];
+  if(!h.gaps.length){ lines.push("• Portfolio is complete — consider featuring them or inviting a testimonial."); }
+  h.gaps.forEach(g=>lines.push("• "+g));
+  if(h.photos>0 && h.photos<CONFIG.MIN_PHOTOS) lines.push("• Tip: dishes shot in natural light near a window perform best on the directory.");
+  if(c[C.graduate]===true) lines.push("• "+first+" is a graduate 🎓 — the spotlight band loves a good story; ask about their placement.");
+  if(isDormant(c)) lines.push("• They\u2019ve been quiet "+daysAgo(lastActive(c))+" days — a warm check-in beats a checklist.");
+  return lines.join("\n");
+}
+async function aiCoach(id){
+  const c=chefById(id); if(!c) return;
+  const h=health(c), out=$("#ai-out"), btn=$("#ai-btn");
+  if(!CONFIG.AI_ENDPOINT){ out.innerHTML='<div class="ai-out">'+esc(ruleCoaching(c,h))+'</div>'; return; }
+  btn.disabled=true; btn.textContent="Thinking…";
+  try{
+    const res=await fetch(CONFIG.AI_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({chef:c, gaps:h.gaps, score:h.score})});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const data=await res.json().catch(()=>null);
+    const text = data && (data.coaching||data.text||data.message||data.output) || (typeof data==="string"?data:null);
+    out.innerHTML='<div class="ai-out">'+esc(text||ruleCoaching(c,h))+'</div>';
+    if(data && (data.draft||data.ready_message)){ S.draft={chefId:id, template:"AI draft", subject:"A few ideas for your ChefLink profile", body:data.draft||data.ready_message}; }
+  }catch(e){
+    out.innerHTML='<div class="ai-out">'+esc(ruleCoaching(c,h))+'</div>';
+    toast("AI coach wasn\u2019t reachable — showing rule-based suggestions instead.");
+  }finally{ btn.disabled=false; btn.textContent="✨ Suggest improvements with AI"; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SCREEN 4 — COMMUNICATION
+   ══════════════════════════════════════════════════════════════ */
+const TEMPLATES = {
+  welcome:{label:"👋 Welcome", subject:"Welcome to ChefLink Sydney!", build:(c,h,first)=>
+    "Hi "+first+",\n\nWelcome aboard — great to have you on ChefLink Sydney! Your profile is live in our system, and a complete portfolio is what gets venues reaching out.\n\n"+gapPara(h)+"\nIf you get stuck anywhere, just reply — happy to help.\n\nMarc\nChefLink Sydney"},
+  nudge:{label:"📈 Portfolio nudge", subject:"Your ChefLink portfolio is so close", build:(c,h,first)=>
+    "Hi "+first+",\n\nI was looking at your portfolio today — it's at "+h.score+"/100 and honestly not far off looking brilliant. A couple of quick wins would make a real difference:\n\n"+gapBullets(h)+"\nMost of these take five minutes on your phone. Venues really do browse these profiles, and yours deserves to stand out.\n\nMarc\nChefLink Sydney"},
+  grad:{label:"🎓 Congrats graduate", subject:"Congratulations, graduate! 🎓", build:(c,h,first)=>
+    "Hi "+first+",\n\nHuge congratulations on graduating! 🎓 Your profile now carries the graduate badge, and graduates get a spot in our spotlight band on the directory.\n\n"+(h.gaps.length?("To make the most of the extra eyeballs:\n\n"+gapBullets(h)+"\n"):"Your portfolio is already looking sharp, so you're set for the extra attention.\n\n")+"Proud to have you on the platform — this is exactly what ChefLink is for.\n\nMarc\nChefLink Sydney"},
+  featured:{label:"⭐ Ready to be featured", subject:"We'd love to feature you on ChefLink", build:(c,h,first)=>
+    "Hi "+first+",\n\nYour portfolio is one of the strongest on the platform, and I'd love to give it a featured spot on the directory.\n\n"+(h.gaps.length?("Just one or two touches first:\n\n"+gapBullets(h)+"\n"):"")+"Keen? Reply and I'll flick the switch.\n\nMarc\nChefLink Sydney"},
+  missyou:{label:"🌱 We miss you", subject:"Still cooking? We miss you at ChefLink", build:(c,h,first)=>
+    "Hi "+first+",\n\nIt's been a little while since your profile had any love, and I wanted to check in — how's everything going?\n\nVenues are actively browsing right now, and a quick refresh puts you back in front of them:\n\n"+gapBullets(h)+"\nNo pressure at all — even a reply to say you're flat out helps me keep the directory current.\n\nMarc\nChefLink Sydney"},
+  approve:{label:"✅ Get approved", subject:"One step from going live on ChefLink", build:(c,h,first)=>
+    "Hi "+first+",\n\nGood news: your profile is nearly ready to go live in the directory. It just needs approval, and approval is easy once the essentials are in place:\n\n"+gapBullets(h)+"\nOnce those are done I can approve you straight away and venues can find you.\n\nMarc\nChefLink Sydney"}
+};
+function gapBullets(h){ return h.gaps.length? h.gaps.map(g=>"• "+g).join("\n")+"\n" : "• Nothing! Your portfolio is complete.\n"; }
+function gapPara(h){ return h.gaps.length? ("A great next step: "+h.gaps.slice(0,2).join("; ").toLowerCase()+".\n") : "Your portfolio already looks complete — flying start!\n"; }
+function suggestedTemplate(c,h){
+  if(c[C.approved]!==true) return "approve";
+  if(daysAgo(c[C.created])<10) return "welcome";
+  if(c[C.graduate]===true && daysAgo(c[C.created])<60) return "grad";
+  if(isDormant(c)) return "missyou";
+  if(!h.gaps.length && c[C.featured]!==true) return "featured";
+  return "nudge";
+}
+function startDraft(id){
+  const c=chefById(id), h=health(c);
+  applyTemplate(id, suggestedTemplate(c,h));
+  go("comms");
+}
+function applyTemplate(id, key){
+  const c=chefById(id); if(!c) return;
+  const h=health(c), t=TEMPLATES[key];
+  const first=String(c[C.name]||"there").split(/\s+/)[0];
+  S.draft={chefId:id, template:t.label, templateKey:key, subject:t.subject, body:t.build(c,h,first)};
+  if(S.view==="comms") render();
+}
+function pickDraftChef(id){ if(!id){S.draft={chefId:null}; render(); return;} const c=chefById(id); applyTemplate(id, suggestedTemplate(c,health(c))); }
+function viewComms(){
+  const c=S.draft.chefId?chefById(S.draft.chefId):null;
+  const opts='<option value="">Choose a chef…</option>'+S.chefs.slice().sort((a,b)=>String(a[C.name]||"").localeCompare(String(b[C.name]||""))).map(x=>'<option value="'+esc(x[C.id])+'"'+(c&&String(c[C.id])===String(x[C.id])?" selected":"")+'>'+esc(x[C.name]||"Unnamed")+'</option>').join("");
+  let warn="";
+  if(c){ const lcd=lastContact(c[C.id]); if(lcd && daysAgo(lcd)<7) warn='<div class="warn-box">⚠️ <span><b>'+esc(String(c[C.name]).split(" ")[0])+' was contacted '+ago(lcd)+'.</b> Nudging twice in a week can feel like pestering — maybe give it a few more days?</span></div>'; }
+  return ''+
+  '<h1 class="screen-title">Messages</h1>'+
+  '<p class="screen-sub">Turn portfolio gaps into a warm, personal nudge — never a scolding checklist.</p>'+
+  '<div class="grid two">'+
+    '<div><div class="card"><h3>Draft a message</h3>'+
+      '<div class="field"><label for="draft-chef">Chef</label><select id="draft-chef" onchange="pickDraftChef(this.value)" style="width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--input);">'+opts+'</select></div>'+
+      (c? ''+
+        '<div class="tmpl-chips">'+Object.entries(TEMPLATES).map(([k,t])=>'<button class="chip'+(S.draft.templateKey===k?' active':'')+'" onclick="applyTemplate(\''+esc(c[C.id])+'\',\''+k+'\')">'+t.label+'</button>').join("")+'</div>'+
+        warn+
+        '<div class="field"><label for="draft-subject">Subject</label><input id="draft-subject" value="'+esc(S.draft.subject||"")+'"></div>'+
+        '<div class="field"><label for="draft-body">Message</label><textarea id="draft-body" style="min-height:260px;">'+esc(S.draft.body||"")+'</textarea></div>'+
+        '<div class="actions-row">'+
+          '<button class="btn btn-ghost" onclick="sendCopy()">📋 Copy</button>'+
+          '<button class="btn btn-ghost" onclick="sendMail()">✉️ Email</button>'+
+          '<button class="btn btn-gold" onclick="sendNotify()">🔔 Send to their dashboard</button>'+
+        '</div>'
+      : '<div class="empty"><span class="big">💌</span>Pick a chef above and I\u2019ll pre-fill a friendly note from their actual portfolio gaps.</div>')+
+    '</div></div>'+
+    '<div><div class="card"><h3>Communication log'+(c?' · '+esc(String(c[C.name]||"").split(" ")[0]):'')+'</h3><div class="row-list">'+commLogHTML(c?c[C.id]:null)+'</div>'+
+    (c?'<button class="btn btn-ghost btn-sm section-gap" onclick="S.draft={chefId:null};render();">Show all chefs</button>':'')+
+    '</div></div>'+
+  '</div>'+storageFootnote();
+}
+function grabDraft(){ S.draft.subject=$("#draft-subject").value; S.draft.body=$("#draft-body").value; return chefById(S.draft.chefId); }
+async function afterSend(c, channel){
+  await logComm({chef_id:c[C.id], chef_name:c[C.name], template:S.draft.template||"Message", subject:S.draft.subject, channel});
+  render();
+}
+async function sendCopy(){
+  const c=grabDraft(); if(!c) return;
+  const txt=S.draft.subject+"\n\n"+S.draft.body;
+  try{ await navigator.clipboard.writeText(txt); }
+  catch(e){ const ta=document.createElement("textarea"); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(_){} ta.remove(); }
+  toast("Copied — logged in the contact history ✓");
+  afterSend(c,"clipboard");
+}
+function sendMail(){
+  const c=grabDraft(); if(!c) return;
+  if(isPlaceholder(c[C.email])){ toast("No real email on file for this chef.", true); return; }
+  location.href="mailto:"+encodeURIComponent(c[C.email])+"?subject="+encodeURIComponent(S.draft.subject)+"&body="+encodeURIComponent(S.draft.body);
+  afterSend(c,"email");
+}
+async function sendNotify(){
+  const c=grabDraft(); if(!c) return;
+  if(S.demo){ toast("Demo mode — notification simulated and logged ✓"); afterSend(c,"dashboard"); return; }
+  try{
+    await sb("POST", CONFIG.NOTIFICATIONS_TABLE, "", {chef_id:c[C.id], title:S.draft.subject, body:S.draft.body, type:"crm_message"});
+    toast("Sent to their ChefLink dashboard ✓");
+    afterSend(c,"dashboard");
+  }catch(e){
+    toast("Couldn\u2019t write to \""+CONFIG.NOTIFICATIONS_TABLE+"\" — create that table in Supabase, or use Copy / Email for now.", true);
+  }
+}
+
+/* ── Init ─────────────────────────────────────────── */
+(function init(){
+  const theme=store.get("clcrm_theme")||"dark";
+  document.body.dataset.theme=theme;
+  $("#theme-btn") && ($("#theme-btn").textContent = theme==="dark"?"☀️":"🌙");
+  if(CONFIG.DEMO_MODE) $("#li-demo").style.display="block";
+  $("#li-pw").addEventListener("keydown", e=>{ if(e.key==="Enter") doLogin(); });
+  // resume a saved session
+  try{
+    const saved=store.get("clcrm_session");
+    if(saved){ const s=JSON.parse(saved);
+      if(s && s.access_token && s.expires_at && s.expires_at*1000 > Date.now()+60000){ S.session=s; startApp(); } }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
