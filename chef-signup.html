@@ -268,6 +268,8 @@ textarea{ resize:vertical; min-height:100px; }
 
       <label class="flagbox"><input type="checkbox" id="flagGraduate"><span><b>🎓 I'm a recent graduate</b><small>Tick this to be featured in the New Graduate Chefs spotlight — restaurants looking for fresh talent will find you here.</small></span></label>
 
+      <label class="flagbox" id="termsBox"><input type="checkbox" id="agreeTerms"><span><b>I agree to the Terms &amp; Conditions</b><small>I have read and agree to the ChefLink Sydney <a href="index.html#terms" target="_blank" rel="noopener" style="color:var(--gold)">Terms &amp; Conditions</a>. Required to publish.</small></span></label>
+
       <div class="status" id="publishStatus"></div>
 
       <div class="btn-row" style="flex-direction:column">
@@ -956,6 +958,12 @@ function buildPayload(urls){
 }
 
 const publishStatus = $('#publishStatus');
+$('#agreeTerms').addEventListener('change', () => {
+  if ($('#agreeTerms').checked) {
+    $('#termsBox').style.borderLeftColor = 'var(--gold)';
+    if (publishStatus.textContent.includes('Terms')) setStatus(publishStatus, '', '');
+  }
+});
 $('#btnPublish').addEventListener('click', async () => {
   /* friendly validation — only the true essentials are required */
   const missing = [];
@@ -967,6 +975,13 @@ $('#btnPublish').addEventListener('click', async () => {
     ['firstName','surname','email'].forEach(id => $('#'+id).parentElement.classList.toggle('missing', !$('#'+id).value.trim()));
     return;
   }
+  if (!$('#agreeTerms').checked) {
+    setStatus(publishStatus, 'err', 'Please tick the box to agree to the Terms & Conditions before publishing.');
+    $('#termsBox').style.borderLeftColor = 'var(--danger)';
+    $('#termsBox').scrollIntoView({ behavior:'smooth', block:'center' });
+    return;
+  }
+  $('#termsBox').style.borderLeftColor = 'var(--gold)';
   if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY) {
     setStatus(publishStatus, 'err', 'Publishing is not set up yet — please contact ChefLink Sydney and we will add your profile for you.');
     return;

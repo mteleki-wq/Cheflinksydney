@@ -268,7 +268,7 @@ footer{background:#1C1C1C;padding:36px 24px;text-align:center}
   <div class="nav-desktop">
     <button class="nav-link active" id="nl-home" onclick="showPage('home')">Home</button>
     <button class="nav-link" id="nl-directory" onclick="showPage('directory')">Find Chefs</button>
-    <button class="nav-link" id="nl-upload" onclick="showPage('upload')">Create Chef Profile</button>
+    <button class="nav-link" id="nl-upload" onclick="window.location.href='chef-signup.html'">Create Chef Profile</button>
     <button class="btn-nav" onclick="showPage('inquiry')">View Chef Profiles</button>
   </div>
   <button class="hamburger" id="hamburger" onclick="toggleMenu()" aria-label="Menu">
@@ -280,7 +280,7 @@ footer{background:#1C1C1C;padding:36px 24px;text-align:center}
 <div class="mobile-menu" id="mobile-menu">
   <button class="mobile-menu-link active" id="ml-home" onclick="showPage('home');closeMenu()">Home</button>
   <button class="mobile-menu-link" id="ml-directory" onclick="showPage('directory');closeMenu()">Find Chefs</button>
-  <button class="mobile-menu-link" id="ml-upload" onclick="showPage('upload');closeMenu()">Create Chef Profile</button>
+  <button class="mobile-menu-link" id="ml-upload" onclick="window.location.href='chef-signup.html'">Create Chef Profile</button>
   <button class="mobile-menu-hire" onclick="showPage('inquiry');closeMenu()">View Chef Profiles</button>
 </div>
 
@@ -305,7 +305,7 @@ footer{background:#1C1C1C;padding:36px 24px;text-align:center}
       <p class="hero-sub">Established chefs present their signature dishes, restaurant pedigree and proven experience through a professional ChefLink Sydney profile. Venues discover trusted talent and connect directly.</p>
       <p class="hero-sub2">Present your craft. Showcase your track record. Connect with Sydney's leading kitchens.</p>
       <div class="hero-btns">
-        <button class="btn btn-gold" style="padding:13px 22px;font-size:12px;letter-spacing:1px" onclick="showPage('upload')">Create Chef Profile</button>
+        <button class="btn btn-gold" style="padding:13px 22px;font-size:12px;letter-spacing:1px" onclick="window.location.href='chef-signup.html'">Create Chef Profile</button>
         <button class="btn btn-outline" style="padding:13px 22px;font-size:12px;letter-spacing:1px" onclick="showPage('directory')">View Chef Profiles</button>
         <button class="btn btn-outline" id="presentation-btn" style="padding:13px 22px;font-size:12px;letter-spacing:1px;display:none" onclick="openPresentation()">▶ <span id="presentation-btn-label">How It Works</span></button>
       </div>
@@ -365,7 +365,7 @@ footer{background:#1C1C1C;padding:36px 24px;text-align:center}
       <h2 style="font-family:'Playfair Display',serif;font-size:clamp(20px,3vw,28px);margin-bottom:10px;color:#1C1C1C">Showcase Your Work</h2>
       <p style="font-size:13px;color:#1C1C1C;opacity:.75;margin-bottom:6px;font-weight:300;line-height:1.6">Create a professional ChefLink profile to showcase your experience, cuisine style and signature dishes to Sydney hospitality venues.</p>
       <p style="font-size:11px;color:#1C1C1C;opacity:.55;margin-bottom:18px;font-weight:300;line-height:1.5">All work arrangements, rates and agreements are made directly between you and the venue.</p>
-      <button class="btn btn-dark" onclick="showPage('upload')">Create Chef Profile</button>
+      <button class="btn btn-dark" onclick="window.location.href='chef-signup.html'">Create Chef Profile</button>
     </div>
     <div class="cta-dark">
       <p style="letter-spacing:3px;text-transform:uppercase;font-size:10px;color:#C9A84C;margin-bottom:6px;font-weight:500">For Restaurants &amp; Venues</p>
@@ -386,7 +386,7 @@ footer{background:#1C1C1C;padding:36px 24px;text-align:center}
           <li style="padding:3px 0;border-bottom:1px solid #E8E2D6">✓ One profile photo</li>
           <li style="padding:3px 0">✓ 7-day free showcase</li>
         </ul>
-        <button class="btn btn-outline" style="width:100%;padding:8px 0;font-size:11px" onclick="showPage('upload')">Create Free Profile</button>
+        <button class="btn btn-outline" style="width:100%;padding:8px 0;font-size:11px" onclick="window.location.href='chef-signup.html'">Create Free Profile</button>
       </div>
       <div style="background:#fff;border:1px solid #E8E2D6;border-radius:4px;padding:22px 16px">
         <h3 style="font-family:'Playfair Display',serif;font-size:16px;margin-bottom:4px">Basic Profile</h3>
@@ -1392,6 +1392,7 @@ function closeMenu() {
 }
 function checkSecretURL() {
   if (window.location.hash === '#admin-cheflink') showPage('admin');
+  if (window.location.hash === '#terms') showPage('terms');
 }
 window.addEventListener('hashchange', checkSecretURL);
 document.addEventListener('DOMContentLoaded', checkSecretURL);
