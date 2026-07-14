@@ -441,7 +441,36 @@ function buildChips(id){
     box.appendChild(c);
   });
 }
-buildChips('#workChips'); buildChips('#cuisineChips');
+buildChips('#workChips');
+(async () => {
+  // Pull in any cuisines the admin has added centrally (site_settings ->
+  // 'cuisine_categories'), merged additively on top of the built-in list
+  // below — never removes an option, only ever adds new ones, and any
+  // failure (offline, table missing, bad JSON) silently keeps the
+  // built-in defaults exactly as they are today.
+  try {
+    const r = await fetch(CONFIG.SUPABASE_URL + '/rest/v1/site_settings?key=eq.cuisine_categories&select=value&limit=1', {
+      headers: { apikey: CONFIG.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + CONFIG.SUPABASE_ANON_KEY },
+    });
+    if (r.ok) {
+      const rows = await r.json();
+      if (rows.length && rows[0].value) {
+        const central = JSON.parse(rows[0].value);
+        if (Array.isArray(central) && central.length) {
+          const box = $('#cuisineChips');
+          const existing = box.dataset.values.split(',').map(s => s.trim());
+          const merged = existing.slice();
+          central.forEach(c => {
+            const v = String(c || '').trim();
+            if (v && !merged.some(e => e.toLowerCase() === v.toLowerCase())) merged.push(v);
+          });
+          box.dataset.values = merged.join(',');
+        }
+      }
+    }
+  } catch (e) { /* offline or unavailable — built-in cuisine list stays as-is */ }
+  buildChips('#cuisineChips');
+})();
 const chipValues = (id) => $$(id + ' .chip.on').map(c => c.textContent);
 const setChips   = (id, values) => $$(id + ' .chip').forEach(c => {
   if (values.some(v => v.toLowerCase() === c.textContent.toLowerCase())) c.classList.add('on');
