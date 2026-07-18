@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logo Animation Generator — WebEscapade</title>
+<!--
+  ============================================================
+  LOGO ANIMATION GENERATOR
+  ============================================================
+  Drop one logo (PNG with transparency works best) → get a
+  cinematic logo animation exported as a real video file.
+  Everything happens on your device — nothing is uploaded.
+
+  Styles:
+    · Shard Assemble  — logo breaks apart & flies together
+    · Split & Seal    — three bands slide in and lock, flash
+    · Particle Forge  — golden particles swirl and forge it
+    · Luxe Reveal     — iris reveal, gold glow, light sweeps
+
+  USING THE RESULT:
+  1. Download the video.
+  2. Drop it into CapCut / iMovie / Canva as an intro sting,
+     or upload to GitHub and use it as a hero video.
+  ============================================================
+-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+  :root{
+    --bg:#070b18;--card:#0d1226;--ink:#eef1fb;--muted:#9aa3c7;
+    --line:rgba(154,163,199,.18);
+    --grad:linear-gradient(100deg,#a855f7 0%,#4f7cff 55%,#39d0c3 100%);
+    --teal:#39d0c3;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:'Sora',-apple-system,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .wrap{max-width:760px;margin:0 auto;padding:44px 22px 90px}
+  .eyebrow{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:var(--teal);display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .eyebrow::before{content:"";width:34px;height:1px;background:var(--grad)}
+  h1{font-size:clamp(26px,5vw,36px);font-weight:800;letter-spacing:-.01em;line-height:1.15}
+  h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{color:var(--muted);font-size:15px;margin-top:12px;max-width:56ch}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;margin-top:22px}
+  .card h2{font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+  .num{width:24px;height:24px;border-radius:50%;background:var(--grad);color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+
+  /* drop zone */
+  #drop{
+    border:2px dashed rgba(79,124,255,.45);border-radius:14px;padding:34px 20px;text-align:center;
+    cursor:pointer;transition:border-color .25s,background .25s;
+  }
+  #drop.over{border-color:var(--teal);background:rgba(57,208,195,.06)}
+  #drop p{color:var(--muted);font-size:14px}
+  #drop b{color:var(--ink)}
+  #fileIn{display:none}
+  #logoPrev{
+    display:none;margin:16px auto 0;max-width:190px;max-height:190px;border-radius:12px;
+    background:
+      linear-gradient(45deg,rgba(255,255,255,.06) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.06) 75%),
+      linear-gradient(45deg,rgba(255,255,255,.06) 25%,transparent 25%,transparent 75%,rgba(255,255,255,.06) 75%);
+    background-size:18px 18px;background-position:0 0,9px 9px;
+    padding:10px;border:1px solid var(--line);
+  }
+  #logoPrev.show{display:block}
+  #logoName{display:none;text-align:center;font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.12em;color:var(--teal);margin-top:10px}
+  #logoName.show{display:block}
+
+  /* settings */
+  .settings{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;margin-top:4px}
+  .set{flex:1;min-width:170px}
+  .set label{display:block;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .set output{color:var(--teal);font-weight:700}
+  input[type="range"]{width:100%;accent-color:#4f7cff}
+  select{
+    width:100%;background:#0a0f22;border:1px solid var(--line);border-radius:10px;color:var(--ink);
+    font-family:'Sora',sans-serif;font-size:14px;padding:11px 12px;outline:none;
+  }
+
+  .go{
+    width:100%;margin-top:18px;background:var(--grad);border:none;border-radius:100px;color:#fff;
+    font-family:'Sora',sans-serif;font-weight:800;font-size:16px;padding:17px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .go:disabled{opacity:.4;cursor:not-allowed}
+  .go:active{transform:scale(.99)}
+
+  /* progress + result */
+  #stage{display:none;text-align:center}
+  #stage.show{display:block}
+  canvas{width:100%;border-radius:12px;background:#000;display:block}
+  .bar{height:6px;background:rgba(255,255,255,.1);border-radius:100px;overflow:hidden;margin-top:14px}
+  .bar i{display:block;height:100%;width:0%;background:var(--grad);transition:width .2s}
+  .stage-note{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:10px}
+
+  #result{display:none}
+  #result.show{display:block}
+  #result video{width:100%;border-radius:12px;background:#000;display:block;max-height:70vh}
+  .dl{
+    display:inline-block;margin-top:16px;background:var(--grad);color:#fff;text-decoration:none;
+    font-weight:800;font-size:15px;border-radius:100px;padding:15px 34px;
+  }
+  .again{
+    display:inline-block;margin-top:16px;margin-left:10px;color:var(--muted);text-decoration:none;
+    font-weight:700;font-size:14px;border:1px solid var(--line);border-radius:100px;padding:14px 26px;cursor:pointer;
+    background:none;font-family:'Sora',sans-serif;
+  }
+  .after{margin-top:16px;font-size:13px;color:var(--muted);text-align:left}
+  .after code{background:rgba(79,124,255,.12);color:#bcd0ff;padding:2px 7px;border-radius:5px;font-family:'Space Mono',monospace;font-size:12px}
+  .warn{margin-top:14px;font-size:12.5px;color:#ffd479;display:none}
+  .warn.show{display:block}
+
+  /* animation style selector */
+  .styles{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(max-width:560px){.styles{grid-template-columns:1fr}}
+  .style-btn{
+    text-align:left;background:#0a0f22;border:1.5px solid var(--line);border-radius:14px;
+    padding:16px;cursor:pointer;font-family:'Sora',sans-serif;color:var(--ink);
+    transition:border-color .2s,transform .2s;-webkit-tap-highlight-color:transparent;
+  }
+  .style-btn:hover{transform:translateY(-2px)}
+  .style-btn.on{border-color:transparent;background:linear-gradient(#0a0f22,#0a0f22) padding-box,var(--grad) border-box}
+  .style-btn .s-ico{font-size:20px}
+  .style-btn b{display:block;font-size:14px;margin:8px 0 4px}
+  .style-btn small{color:var(--muted);font-size:11.5px;line-height:1.5;display:block}
+  .style-btn .s-tag{
+    display:inline-block;margin-top:8px;font-family:'Space Mono',monospace;font-size:9px;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--teal);
+    border:1px solid rgba(57,208,195,.35);border-radius:100px;padding:3px 9px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Logo animation generator</div>
+  <h1>Drop your logo.<br><span class="g">Get a cinematic logo animation.</span></h1>
+  <p class="lede">Break it apart and reassemble it, forge it from golden particles, or reveal it with light sweeps — exported as a real video file, rendered entirely on your device. Nothing is uploaded anywhere.</p>
+
+  <!-- 1. logo -->
+  <div class="card">
+    <h2><span class="num">1</span> Add your logo</h2>
+    <div id="drop">
+      <p><b>Tap to choose your logo</b><br>or drag it here · PNG with transparency works best</p>
+    </div>
+    <input type="file" id="fileIn" accept="image/*">
+    <img id="logoPrev" alt="Logo preview">
+    <div id="logoName"></div>
+  </div>
+
+  <!-- 2. animation style -->
+  <div class="card">
+    <h2><span class="num">2</span> Choose the animation style</h2>
+    <div class="styles" id="styleGrid">
+      <button class="style-btn on" data-style="shards" type="button">
+        <span class="s-ico">🧩</span><b>Shard Assemble</b>
+        <small>The logo breaks into dozens of pieces that fly in from every direction, spin, and lock into place — sealed with a golden light sweep.</small>
+        <span class="s-tag">Break-apart · signature look</span>
+      </button>
+      <button class="style-btn" data-style="slices" type="button">
+        <span class="s-ico">✂️</span><b>Split &amp; Seal</b>
+        <small>The logo splits into three bands that slide in from opposite sides and seal together with a flash of light.</small>
+        <span class="s-tag">Split · clean &amp; bold</span>
+      </button>
+      <button class="style-btn" data-style="particles" type="button">
+        <span class="s-ico">✨</span><b>Particle Forge</b>
+        <small>Thousands of glowing particles swirl out of the dark and forge themselves into your logo, pixel by pixel.</small>
+        <span class="s-tag">Particles · magical</span>
+      </button>
+      <button class="style-btn" data-style="luxe" type="button">
+        <span class="s-ico">🌟</span><b>Luxe Reveal</b>
+        <small>A slow cinematic iris reveal with a soft gold glow, gentle zoom, and a double light sweep. Pure luxury.</small>
+        <span class="s-tag">Reveal · premium</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. settings -->
+  <div class="card">
+    <h2><span class="num">3</span> Tune the feel</h2>
+    <div class="settings">
+      <div class="set">
+        <label>Length — <output id="secOut">6</output>s</label>
+        <input type="range" id="secIn" min="4" max="10" step="0.5" value="6">
+      </div>
+      <div class="set">
+        <label>Format</label>
+        <select id="sizeIn">
+          <option value="1080x1080" selected>Square 1080×1080 — Instagram post</option>
+          <option value="1080x1920">Vertical 1080×1920 — Reels / Stories / TikTok</option>
+          <option value="1920x1080">Widescreen 1920×1080 — YouTube / website hero</option>
+        </select>
+      </div>
+      <div class="set">
+        <label>Background</label>
+        <select id="bgIn">
+          <option value="#000000" selected>Black — cinematic</option>
+          <option value="#101014">Soft charcoal</option>
+          <option value="#12100b">Espresso — warm dark</option>
+          <option value="#0b1524">Deep navy</option>
+          <option value="#faf7f0">Warm cream</option>
+          <option value="#ffffff">White</option>
+        </select>
+      </div>
+    </div>
+    <button class="go" id="goBtn" disabled>Generate logo animation (video)</button>
+    <div class="warn" id="recWarn">Your browser doesn't support in-page video recording. Try Safari 16+ on iPad/iPhone or any recent Chrome.</div>
+  </div>
+
+  <!-- 4. rendering -->
+  <div class="card" id="stage">
+    <h2 style="justify-content:center"><span class="num">4</span> Filming…</h2>
+    <canvas id="cv"></canvas>
+    <div class="bar"><i id="barFill"></i></div>
+    <div class="stage-note">Rendering in real time — keep this tab open</div>
+  </div>
+
+  <!-- 4. result -->
+  <div class="card" id="result">
+    <h2><span class="num">✓</span> Your logo animation</h2>
+    <video id="outVid" controls playsinline muted loop></video>
+    <a class="dl" id="dlBtn" download="logo-animation.mp4" href="#">Download video</a>
+    <button class="again" id="againBtn" type="button">Try another style</button>
+    <div class="after" id="afterNote">
+      <b>Next:</b> drop the file into <code>CapCut</code>, <code>iMovie</code> or <code>Canva</code> as an intro or outro sting for your promo videos — or upload it to your GitHub repository and use it as a hero video on the website. Generate all four styles and mix them across your posts.
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- logo intake (single image) ---------- */
+var logoImg = null;
+var drop = document.getElementById('drop');
+var fileIn = document.getElementById('fileIn');
+
+drop.addEventListener('click', function(){ fileIn.click(); });
+drop.addEventListener('dragover', function(e){ e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', function(){ drop.classList.remove('over'); });
+drop.addEventListener('drop', function(e){
+  e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files.length) addFile(e.dataTransfer.files[0]);
+});
+fileIn.addEventListener('change', function(){
+  if (fileIn.files.length) addFile(fileIn.files[0]);
+  fileIn.value = '';
+});
+
+function addFile(f){
+  if (!f.type.match(/^image\//)) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      logoImg = img;
+      var prev = document.getElementById('logoPrev');
+      prev.src = img.src;
+      prev.classList.add('show');
+      var nm = document.getElementById('logoName');
+      nm.textContent = f.name + ' · ' + img.width + '×' + img.height;
+      nm.classList.add('show');
+      drop.querySelector('p').innerHTML = '<b>Logo loaded</b> — tap to replace it';
+      document.getElementById('goBtn').disabled = false;
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(f);
+}
+
+document.getElementById('secIn').addEventListener('input', function(){
+  document.getElementById('secOut').textContent = this.value;
+});
+
+/* ---------- style selection ---------- */
+var styleSel = 'shards';
+document.querySelectorAll('.style-btn').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.style-btn').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    styleSel = b.dataset.style;
+  });
+});
+
+/* ---------- recording support check ---------- */
+function pickMime(){
+  var options = ['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm'];
+  for (var i = 0; i < options.length; i++){
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(options[i])) return options[i];
+  }
+  return null;
+}
+if (!pickMime()) document.getElementById('recWarn').classList.add('show');
+
+/* ---------- helpers ---------- */
+function easeOutCubic(p){ return 1 - Math.pow(1 - p, 3); }
+function easeOutBack(p){ var c = 1.35; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); }
+function clamp01(v){ return v < 0 ? 0 : (v > 1 ? 1 : v); }
+/* deterministic pseudo-random so shards fly the same way each render */
+function mulberry(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function isLightBg(hex){
+  var r = parseInt(hex.substr(1,2),16), g = parseInt(hex.substr(3,2),16), b = parseInt(hex.substr(5,2),16);
+  return (r*0.299 + g*0.587 + b*0.114) > 150;
+}
+
+/* ---------- generate ---------- */
+document.getElementById('goBtn').addEventListener('click', function(){
+  if (!logoImg) return;
+  var mime = pickMime();
+  if (!mime) return;
+
+  var dur = parseFloat(document.getElementById('secIn').value);
+  var size = document.getElementById('sizeIn').value.split('x');
+  var cw = +size[0], ch = +size[1];
+  var bg = document.getElementById('bgIn').value;
+  var lightBg = isLightBg(bg);
+
+  var cv = document.getElementById('cv');
+  cv.width = cw; cv.height = ch;
+  var ctx = cv.getContext('2d');
+
+  /* ----- logo placement: centred, 68% of the shorter side ----- */
+  var maxSide = Math.min(cw, ch) * 0.68;
+  var s = maxSide / Math.max(logoImg.width, logoImg.height);
+  var lw = Math.round(logoImg.width * s), lh = Math.round(logoImg.height * s);
+  var lx = Math.round((cw - lw) / 2), ly = Math.round((ch - lh) / 2);
+
+  /* offscreen: the logo at final resolution */
+  var logoCv = document.createElement('canvas');
+  logoCv.width = lw; logoCv.height = lh;
+  logoCv.getContext('2d').drawImage(logoImg, 0, 0, lw, lh);
+
+  /* offscreen: reused each frame for the masked light sweep */
+  var shineCv = document.createElement('canvas');
+  shineCv.width = lw; shineCv.height = lh;
+  var shineCtx = shineCv.getContext('2d');
+
+  /* ----- timeline ----- */
+  var BUILD = Math.min(3.2, dur * 0.55);   // seconds spent assembling
+  var FADEIN = 0.25, FADEOUT = 0.5;
+
+  /* ----- per-style precompute ----- */
+  var rand = mulberry(20260718);
+  var shards = [], slices = [], parts = [];
+
+  if (styleSel === 'shards'){
+    var G = 8; /* 8×8 grid of pieces */
+    var cwc = lw / G, chc = lh / G;
+    for (var gy = 0; gy < G; gy++){
+      for (var gx = 0; gx < G; gx++){
+        var cxr = (gx + 0.5) / G - 0.5, cyr = (gy + 0.5) / G - 0.5; /* -0.5..0.5 from centre */
+        var distC = Math.sqrt(cxr*cxr + cyr*cyr) / 0.707;           /* 0 centre → 1 corner */
+        var ang = Math.atan2(cyr, cxr) + (rand() - 0.5) * 1.2;
+        var fly = Math.min(cw, ch) * (0.55 + rand() * 0.5);
+        shards.push({
+          sx: gx * cwc, sy: gy * chc, sw: cwc, sh: chc,
+          dx: Math.cos(ang) * fly, dy: Math.sin(ang) * fly,
+          rot: (rand() - 0.5) * 2.4,
+          delay: distC * 0.42 + rand() * 0.1   /* centre lands first, edges last */
+        });
+      }
+    }
+  }
+
+  if (styleSel === 'slices'){
+    var cuts = [0, 0.34, 0.62, 1]; /* three horizontal bands */
+    for (var si = 0; si < 3; si++){
+      slices.push({
+        sy: Math.round(cuts[si] * lh),
+        sh: Math.round((cuts[si+1] - cuts[si]) * lh) + (si < 2 ? 1 : 0),
+        dir: si === 1 ? 1 : -1,     /* middle band from the right, outer bands from the left */
+        delay: si * 0.14
+      });
+    }
+  }
+
+  if (styleSel === 'particles'){
+    var SAMPLE = 78; /* sampling grid across the longer side */
+    var pScale = SAMPLE / Math.max(lw, lh);
+    var pw = Math.max(1, Math.round(lw * pScale)), ph = Math.max(1, Math.round(lh * pScale));
+    var pc = document.createElement('canvas');
+    pc.width = pw; pc.height = ph;
+    var px = pc.getContext('2d');
+    px.drawImage(logoImg, 0, 0, pw, ph);
+    var data = px.getImageData(0, 0, pw, ph).data;
+    var cell = lw / pw;
+    for (var yy = 0; yy < ph; yy++){
+      for (var xx = 0; xx < pw; xx++){
+        var o = (yy * pw + xx) * 4;
+        if (data[o + 3] < 50) continue;
+        var pa = rand() * Math.PI * 2;
+        var pr = Math.min(cw, ch) * (0.5 + rand() * 0.45);
+        parts.push({
+          tx: lx + (xx + 0.5) * cell, ty: ly + (yy + 0.5) * cell,
+          ox: Math.cos(pa) * pr, oy: Math.sin(pa) * pr,
+          delay: rand() * 0.4,
+          col: 'rgb(' + data[o] + ',' + data[o+1] + ',' + data[o+2] + ')'
+        });
+      }
+    }
+  }
+
+  /* ----- shared drawing pieces ----- */
+  function drawBg(){
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, cw, ch);
+    /* soft ambience behind the logo */
+    var amb = ctx.createRadialGradient(cw/2, ch/2, 0, cw/2, ch/2, Math.min(cw, ch) * 0.62);
+    amb.addColorStop(0, lightBg ? 'rgba(201,168,76,.10)' : 'rgba(216,178,88,.10)');
+    amb.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = amb;
+    ctx.fillRect(0, 0, cw, ch);
+  }
+  function drawVignette(){
+    if (lightBg) return;
+    var g = ctx.createRadialGradient(cw/2, ch/2, Math.min(cw,ch)*0.42, cw/2, ch/2, Math.max(cw,ch)*0.78);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,.4)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, cw, ch);
+  }
+  /* light sweep clipped to the logo's own pixels */
+  function drawShine(prog, strength){
+    if (prog <= 0 || prog >= 1) return;
+    shineCtx.clearRect(0, 0, lw, lh);
+    var travel = -0.35 + prog * 1.7;
+    var x0 = travel * lw;
+    var band = lw * 0.34;
+    var g = shineCtx.createLinearGradient(x0, 0, x0 + band, lh * 0.85);
+    g.addColorStop(0, 'rgba(255,244,204,0)');
+    g.addColorStop(0.5, 'rgba(255,246,214,' + (0.85 * strength) + ')');
+    g.addColorStop(1, 'rgba(255,244,204,0)');
+    shineCtx.fillStyle = g;
+    shineCtx.fillRect(0, 0, lw, lh);
+    shineCtx.globalCompositeOperation = 'destination-in';
+    shineCtx.drawImage(logoCv, 0, 0);
+    shineCtx.globalCompositeOperation = 'source-over';
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.drawImage(shineCv, lx, ly);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  /* the finished logo with a breathing gold glow + slow zoom */
+  function drawSettled(t){
+    var settle = clamp01((t - BUILD) / Math.max(0.001, dur - BUILD));
+    var zoom = 1 + settle * 0.035;
+    var glow = 20 + 12 * Math.sin(t * 1.8);
+    ctx.save();
+    ctx.translate(cw/2, ch/2);
+    ctx.scale(zoom, zoom);
+    ctx.shadowColor = lightBg ? 'rgba(180,140,50,.5)' : 'rgba(224,184,90,.55)';
+    ctx.shadowBlur = glow;
+    ctx.drawImage(logoCv, -lw/2, -lh/2);
+    ctx.restore();
+  }
+  function drawFades(t){
+    var f = 0;
+    if (t < FADEIN) f = 1 - t / FADEIN;
+    if (t > dur - FADEOUT) f = (t - (dur - FADEOUT)) / FADEOUT;
+    if (f > 0){
+      ctx.globalAlpha = Math.min(1, f);
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /* ----- the four style renderers ----- */
+  function renderShards(t){
+    var p = clamp01(t / BUILD);
+    if (p >= 1){ drawSettled(t); return; }
+    ctx.save();
+    ctx.translate(lx, ly);
+    for (var i = 0; i < shards.length; i++){
+      var sh = shards[i];
+      var e = easeOutBack(clamp01((p - sh.delay) / 0.48));
+      if (e <= 0) continue;
+      var mx = sh.sx + sh.sw/2, my = sh.sy + sh.sh/2;
+      ctx.save();
+      ctx.translate(mx + sh.dx * (1 - e), my + sh.dy * (1 - e));
+      ctx.rotate(sh.rot * (1 - e));
+      ctx.globalAlpha = clamp01(e * 2.2);
+      ctx.drawImage(logoCv, sh.sx, sh.sy, sh.sw, sh.sh, -sh.sw/2, -sh.sh/2, sh.sw, sh.sh);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function renderSlices(t){
+    var p = clamp01(t / BUILD);
+    if (p >= 1){
+      drawSettled(t);
+      /* seal flash just after lock-in */
+      var fl = clamp01((t - BUILD) / 0.28);
+      if (fl < 1){
+        ctx.globalAlpha = (1 - fl) * 0.5;
+        ctx.fillStyle = '#fff8e2';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.globalAlpha = 1;
+      }
+      return;
+    }
+    for (var i = 0; i < slices.length; i++){
+      var sl = slices[i];
+      var e = easeOutCubic(clamp01((p - sl.delay) / 0.62));
+      if (e <= 0) continue;
+      var off = sl.dir * cw * 0.85 * (1 - e);
+      ctx.globalAlpha = clamp01(e * 1.6);
+      ctx.drawImage(logoCv, 0, sl.sy, lw, sl.sh, lx + off, ly + sl.sy, lw, sl.sh);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function renderParticles(t){
+    var p = clamp01(t / BUILD);
+    var imgA = clamp01((p - 0.82) / 0.18); /* crossfade to the crisp logo at the end */
+    if (imgA < 1){
+      var dot = Math.max(2, (lw / 78) * 1.2);
+      ctx.globalAlpha = 1 - imgA;
+      for (var i = 0; i < parts.length; i++){
+        var pt = parts[i];
+        var e = easeOutCubic(clamp01((p * 1.45 - pt.delay) / 1));
+        if (e <= 0) continue;
+        var swirl = (1 - e) * 1.7;
+        var ca = Math.cos(swirl), sa = Math.sin(swirl);
+        var rx = pt.ox * ca - pt.oy * sa, ry = pt.ox * sa + pt.oy * ca;
+        ctx.fillStyle = pt.col;
+        ctx.fillRect(pt.tx + rx * (1 - e) - dot/2, pt.ty + ry * (1 - e) - dot/2, dot, dot);
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (imgA > 0){
+      if (p >= 1){ drawSettled(t); }
+      else {
+        ctx.globalAlpha = imgA;
+        ctx.drawImage(logoCv, lx, ly);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  function renderLuxe(t){
+    var p = clamp01(t / BUILD);
+    var iris = easeOutCubic(clamp01(p / 0.55));            /* circle grows open */
+    var zoomIn = 1.12 - 0.12 * easeOutCubic(p);            /* slow settle from large */
+    if (p >= 1){ drawSettled(t); return; }
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cw/2, ch/2, Math.max(1, iris * Math.max(lw, lh) * 0.78), 0, Math.PI * 2);
+    ctx.clip();
+    ctx.translate(cw/2, ch/2);
+    ctx.scale(zoomIn, zoomIn);
+    ctx.globalAlpha = clamp01(p * 3);
+    ctx.shadowColor = lightBg ? 'rgba(180,140,50,.45)' : 'rgba(224,184,90,.5)';
+    ctx.shadowBlur = 26;
+    ctx.drawImage(logoCv, -lw/2, -lh/2);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawScene(t){
+    drawBg();
+    if (styleSel === 'shards')    renderShards(t);
+    if (styleSel === 'slices')    renderSlices(t);
+    if (styleSel === 'particles') renderParticles(t);
+    if (styleSel === 'luxe')      renderLuxe(t);
+
+    /* light sweeps once assembled */
+    var s1 = (t - (BUILD + 0.15)) / 0.9;
+    drawShine(s1, 1);
+    if (styleSel === 'luxe' || dur >= 7){
+      var s2 = (t - (dur - 1.6)) / 0.9;
+      if (dur - 1.6 > BUILD + 1.2) drawShine(s2, 0.7);
+    }
+    drawVignette();
+    drawFades(t);
+  }
+
+  /* ----- record ----- */
+  document.getElementById('stage').classList.add('show');
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('goBtn').disabled = true;
+  cv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  var stream = cv.captureStream(30);
+  var chunks = [];
+  var rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: (cw >= 1920 || ch >= 1920) ? 8000000 : 6000000 });
+  rec.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = function(){
+    var ext = mime.indexOf('mp4') !== -1 ? 'mp4' : 'webm';
+    var blob = new Blob(chunks, { type: mime.split(';')[0] });
+    var url = URL.createObjectURL(blob);
+    var vid = document.getElementById('outVid');
+    vid.src = url;
+    var dl = document.getElementById('dlBtn');
+    dl.href = url;
+    dl.setAttribute('download', 'logo-animation-' + styleSel + '.' + ext);
+    document.getElementById('stage').classList.remove('show');
+    document.getElementById('result').classList.add('show');
+    document.getElementById('goBtn').disabled = false;
+    document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    vid.play().catch(function(){});
+  };
+
+  var t0 = null;
+  function frame(now){
+    if (t0 === null) t0 = now;
+    var t = (now - t0) / 1000;
+    if (t >= dur){ rec.stop(); return; }
+    drawScene(t);
+    document.getElementById('barFill').style.width = (t / dur * 100) + '%';
+    requestAnimationFrame(frame);
+  }
+  rec.start(250);
+  requestAnimationFrame(frame);
+});
+
+document.getElementById('againBtn').addEventListener('click', function(){
+  document.getElementById('styleGrid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+</script>
+</body>
+</html>
